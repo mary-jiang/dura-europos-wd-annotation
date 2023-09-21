@@ -57,7 +57,6 @@ def read_private(func, *args, **kwargs):
         pass
     else:
         mode = os.stat(fd).st_mode
-        print(mode)
         if (stat.S_IRGRP | stat.S_IROTH) & mode:
             raise ValueError(f'{getattr(f, "name", "config file")} is readable to others, '
                              'must be exclusively user-readable!')
