@@ -57,6 +57,7 @@ def read_private(func, *args, **kwargs):
         pass
     else:
         mode = os.stat(fd).st_mode
+        print(mode)
         if (stat.S_IRGRP | stat.S_IROTH) & mode:
             raise ValueError(f'{getattr(f, "name", "config file")} is readable to others, '
                              'must be exclusively user-readable!')
@@ -210,7 +211,7 @@ def login():
     flask.session['oauth_request_token'] = dict(zip(request_token._fields, request_token))
     return flask.redirect(redirect)
 
-@app.route('/oauth/callback')
+@app.route('/oauth-callback')
 def oauth_callback():
     oauth_request_token = flask.session.pop('oauth_request_token', None)
     if oauth_request_token is None:
