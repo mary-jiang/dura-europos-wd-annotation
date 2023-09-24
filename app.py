@@ -22,11 +22,12 @@ import yaml
 from exceptions import WrongDataValueType
 import messages
 
+import queries
 
 app = flask.Flask(__name__)
 app.jinja_env.add_extension('jinja2.ext.do')
 
-user_agent = toolforge.set_user_agent('lexeme-forms', email='mail@lucaswerkmeister.de')
+user_agent = toolforge.set_user_agent('dura-europos-wd-annotation')
 
 requests_session = requests.Session()
 requests_session.headers.update({
@@ -539,7 +540,23 @@ def authentication_area():
         csrf_token = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(64))
         flask.session['_csrf_token'] = csrf_token
 
+    # prefix based on role, add user into user database if not logged in
+    role = "Contributor "
+    try:
+        result = queries.query_db(queries.is_project_lead(), params=[userinfo['name']]) 
+        if not result:
+            # if not in userbase then add as contributor
+            queries.query_db(queries.add_user(), params=[userinfo['name'], False])
+        else:
+            output = queries.jsonify_rows(result)[0]
+            if output['isProjectLead']:
+                role = "Project Lead "
+    except Exception as ex:
+        print(ex)
+        return flask.jsonify(error=404, text=str(ex)), 404
+
     return (Markup(r'<span class="navbar-text">Logged in as ') +
+            role + 
             user_link(userinfo['name']) +
             Markup(r'</span><span id="csrf_token" style="display: none;">') +
             Markup.escape(csrf_token) +

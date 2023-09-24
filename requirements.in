@@ -10,4 +10,5 @@ pytest
 pyyaml
 requests
 requests_oauthlib
+sqlalchemy
 toolforge >= 4.2.0

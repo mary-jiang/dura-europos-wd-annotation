@@ -1,6 +1,6 @@
 # Dura Europos Wikidata Annotation
 
-This tool is a fork of [Wikidata Image Positions](https://wd-image-positions.toolforge.org/) meant for annotation of excavation photos of Dura-Europos. It includes (or will include soon) the original annotation features provided by Wikidata Image Positions along with a pre-queried dashboard of Dura-Europos related items, a streamlined annotating experience/tutorial, and approval system.
+[This tool](https://dura-europos-wd-annotation.toolforge.org/) is a fork of [Wikidata Image Positions](https://wd-image-positions.toolforge.org/) meant for annotation of excavation photos of Dura-Europos. It includes (or will include soon) the original annotation features provided by Wikidata Image Positions along with a pre-queried dashboard of Dura-Europos related items, a streamlined annotating experience/tutorial, and approval system.
 
 ## Toolforge
 
@@ -16,8 +16,7 @@ To update the service, run the following commands after becoming the tool accoun
 ```
 cd ~/www/python/src
 git fetch
-git diff @ @{u} # inspect changes
-git merge --ff-only @{u}
+git pull
 webservice restart
 ```
 
@@ -40,7 +39,11 @@ pip3 install -r requirements.txt
 FLASK_ENV=development flask run
 ```
 
-You will have to set up your own config.yaml, [this tutorial is useful](https://wikitech.wikimedia.org/wiki/Help:Toolforge/My_first_Flask_OAuth_tool), and note that when logging in locally you may have to use the localhost version of the callback
+You will have to set up your own config.yaml, [this tutorial is useful](https://wikitech.wikimedia.org/wiki/Help:Toolforge/My_first_Flask_OAuth_tool), and note that when logging in locally you may have to use the localhost version of the callback (take the oauth query out of the callback url and attach it to your localhost url, and you should be able to log in locally).
+
+Some of the front-end components will not render correctly until you install the node modules. Just run `npm install` in the root directory to install these. You will have to install these in a node shell on the toolforge server by first running `webservice --backend=kubernetes node18 shell` before running the npm install.
+
+This tool uses a sqlite database to keep data that is unique to this tool seperate from Wikidata databases (such as user permissions in the tool itself, local non-posted annotations). To generate a table from a template, run `python3 databasebuilder.py`.
 
 ## Contributing
 
