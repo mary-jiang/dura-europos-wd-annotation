@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block main %}
+<h2>Dashboard</h2>
+{% for item in entries%}
+<div>
+    <a href="{{url_for('item', item_id=item['item_id'])}}">
+    <img src="{{item['image_url']}}">
+    <p>{{item['image_title']}}</p>
+    </a>
+</div>
+{% endfor %}
+{% endblock main %}

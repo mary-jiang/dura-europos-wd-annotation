@@ -23,6 +23,7 @@ from exceptions import WrongDataValueType
 import messages
 
 import queries
+from consts import *
 
 app = flask.Flask(__name__)
 app.jinja_env.add_extension('jinja2.ext.do')
@@ -459,6 +460,29 @@ def api_add_qualifier(domain):
         if qualifier['snaktype'] == 'value' and qualifier['datavalue']['value'] == iiif_region:
             return flask.jsonify(qualifier_hash=qualifier['hash'])
     return flask.jsonify(qualifier_hash=None)
+
+@app.route('/dashboard/<page>')
+def dashboard(page):
+    page = int(page)
+    entries = query_dashboard(page)
+    processed_entries = []
+    # load all item ids and extract 
+    language_codes = request_language_codes()
+    props = ['claims']
+    session = anonymous_session('www.wikidata.org')
+    api_response = session.get(action='wbgetentities',
+                               props=props,
+                               ids=entries,
+                               languages=language_codes)
+    for entry in entries:
+        processed_entry = {
+            'item_id': entry 
+        }
+        image_datavalue = best_value(api_response['entities'][entry], default_property)
+        processed_entry.update(load_image(image_datavalue['value'], language_codes))
+        processed_entries.append(processed_entry)
+
+    return flask.render_template('dashboard.html', entries=processed_entries)
 
 
 # https://iiif.io/api/image/2.0/#region
@@ -1022,6 +1046,32 @@ def query_response_page(response, title):
             break
     pages = response['query']['pages']
     return next(page for page in pages if page['title'] == title)
+
+def query_dashboard(page_number):
+    """Returns list of object ids that should be displayed on the dashboard based on the page number"""
+    query = '''SELECT DISTINCT ?item ?itemLabel WHERE {
+                SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE]". }
+                {
+                    SELECT DISTINCT ?item WHERE {
+                        ?item p:P31 ?statement0.
+                        ?statement0 (ps:P31) wd:Q125191.
+                        ?item p:P195 ?statement1.
+                        ?statement1 (ps:P195/(wdt:P279*)) wd:Q1568434.
+                        ?item p:P18 ?dummy0.
+                    }
+                    ORDER BY ASC(?item)
+                    LIMIT %d
+                    OFFSET %d
+                }
+            }''' % (ENTRIES_PER_PAGE, (page_number - 1) * ENTRIES_PER_PAGE) # TODO: may have to fix the offset
+
+    query_results = requests_session.get('https://query.wikidata.org/sparql', params={'query': query}).json()
+
+    # transform query results into just list of item ids
+    dashboard_item_ids = []
+    for item in query_results['results']['bindings']:
+        dashboard_item_ids.append(item['itemLabel']['value'])
+    return dashboard_item_ids
 
 @app.after_request
 def denyFrame(response):
