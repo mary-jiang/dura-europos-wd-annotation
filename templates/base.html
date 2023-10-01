@@ -15,7 +15,7 @@
       <div class="container-fluid">
         <a href="{{ url_for('index') }}" class="navbar-brand">Dura-Europos Wikidata Annotation Tool</a>
         <ul class="navbar-nav me-auto">
-          <li class="nav-item"><a href="dashboard/1" class="nav-link">Dashboard</a></li>
+          <li class="nav-item"><a href="{{url_for('dashboard', page=1)}}" class="nav-link">Dashboard</a></li>
           <li class="nav-item"><a href="//tools.wmflabs.org/" class="nav-link">Wikimedia Toolforge</a></li>
           <li class="nav-item"><a href="https://github.com/mary-jiang/dura-europos-wd-annotation" class="nav-link">Source code</a></li>
         </ul>
