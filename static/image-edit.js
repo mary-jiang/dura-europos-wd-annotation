@@ -487,7 +487,7 @@ function setup() {
                     this.disabled = true;
                     formData.append('entity_id', subjectId);
                     formData.append('_csrf_token', csrfTokenElement.textContent);
-                    fetch(`${baseUrl}/api/v1/add_statement/${subjectDomain}`, {
+                    fetch(`${baseUrl}/api/v1/add_statement_local/${subjectDomain}`, {
                         method: 'POST',
                         body: formData,
                         credentials: 'include',

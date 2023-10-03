@@ -29,3 +29,15 @@ def is_project_lead():
 def add_user():
     """Adds a user into the users table as a contributor by default"""
     return "INSERT INTO users (username, isprojectlead) VALUES (?, ?)"
+
+def add_statement():
+    """Adds a statement into the statements table"""
+    return "INSERT INTO statements (item_id, property_id, value_id, snaktype, username) VALUES (?, ?, ?, ?, ?)"
+
+def get_latest_statement():
+    """Gets the last row in the statements table (usually the one you just inserted)"""
+    return "SELECT statement_id FROM statements ORDER BY rowid DESC LIMIT 1"
+
+def get_object_statements():
+    """Selects all locally saved statements for an object based on what user is logged in"""
+    return "SELECT * FROM statements WHERE item_id=? and username=?"

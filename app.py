@@ -484,6 +484,66 @@ def dashboard(page):
 
     return flask.render_template('dashboard.html', entries=processed_entries)
 
+@app.route('/api/v1/add_statement_local/<domain>', methods=['POST'])
+def api_add_statement_local(domain):
+    language_codes = request_language_codes()
+    entity_id = flask.request.form.get('entity_id')
+    snaktype = flask.request.form.get('snaktype')
+    item_id = flask.request.form.get('item_id')
+    property_id = flask.request.form.get('property_id', 'P180')
+    csrf_token = flask.request.form.get('_csrf_token')
+    if not entity_id or not snaktype or not csrf_token:
+        return 'Incomplete form data', 400
+    if (snaktype == 'value') != (item_id is not None):
+        return 'Inconsistent form data', 400
+    if snaktype not in {'value', 'somevalue', 'novalue'}:
+        return 'Bad snaktype', 400
+    if property_id not in depicted_properties:
+        return 'Bad property ID', 400
+
+    if csrf_token != flask.session['_csrf_token']:
+        return 'Wrong CSRF token (try reloading the page).', 403
+
+    if not flask.request.referrer.startswith(full_url('index')):
+        return 'Wrong Referer header', 403
+
+    if domain not in {'www.wikidata.org', 'commons.wikimedia.org'}:
+        return 'Unsupported domain', 403
+
+    session = authenticated_session(domain)
+    if session is None:
+        return 'Not logged in', 403
+
+    # construct response
+    depicted = {
+        'snaktype': snaktype,
+        'property_id': property_id,
+    }
+    if snaktype == 'value':
+        depicted['item_id'] = item_id
+        labels = load_labels([item_id], language_codes)
+        depicted['label'] = labels[item_id]
+    else:
+        if snaktype == 'somevalue':
+            depicted['label'] = messages.somevalue(language_codes[0])
+        elif snaktype == 'novalue':
+            depicted['label'] = messages.novalue(language_codes[0])
+        else:
+            raise ValueError('Unknown snaktype')
+
+    # save this statement locally
+    username = get_userinfo()['name']
+    queries.query_db(queries.add_statement(), params=[entity_id, property_id, item_id, snaktype, username])
+
+    # update response with the statement id that was added
+    result = queries.query_db(queries.get_latest_statement())
+    statement_id = queries.jsonify_rows(result)[0]['statement_id']
+    depicted['statement_id'] = statement_id
+    print(statement_id)
+    print(depicted)
+    return flask.jsonify(depicted=depicted,
+                         depicted_item_link=depicted_item_link(depicted))
+
 
 # https://iiif.io/api/image/2.0/#region
 @app.template_filter()
@@ -633,7 +693,7 @@ def load_item_and_property(item_id, property_id,
         item.update(load_image(image_title, language_codes))
 
     if include_depicteds:
-        depicteds = depicted_items(item_data)
+        depicteds = depicted_items(item_data, item_id)
         for depicted in depicteds:
             if 'item_id' in depicted:
                 entity_ids.append(depicted['item_id'])
@@ -682,7 +742,7 @@ def load_file(image_title):
                                languages=language_codes)
     file_data = api_response['entities'][entity_id]
 
-    depicteds = depicted_items(file_data)
+    depicteds = depicted_items(file_data, entity_id)
     for depicted in depicteds:
         if 'item_id' in depicted:
             entity_ids.append(depicted['item_id'])
@@ -869,7 +929,7 @@ def best_values(entity_data, property_id):
 
     return preferred_values or normal_values or deprecated_values
 
-def depicted_items(entity_data):
+def depicted_items(entity_data, entity_id):
     depicteds = []
 
     statements = entity_data.get('claims', entity_data.get('statements', {}))
@@ -894,6 +954,28 @@ def depicted_items(entity_data):
                 break
 
             depicteds.append(depicted)
+
+    # user must be logged in to see their own personal annotations
+    userinfo = get_userinfo()
+    if userinfo is not None:
+        username = userinfo['name']
+        result = queries.query_db(queries.get_object_statements(), params=[entity_id, username])
+        output = queries.jsonify_rows(result)
+        for row in output:
+            depicted = {
+                'snaktype': row['snaktype'],
+                'statement_id': row['statement_id'],
+                'property_id': property_id,
+            }
+            if row['snaktype'] == 'value':
+                depicted['item_id'] = row['value_id']
+            depicteds.append(depicted)
+
+    # TODO: once qualifiers are figured out then will have to connect them to the statements and them add them in here
+    # formatting
+    # {'snaktype': 'value', 'statement_id': 'Q1231009$e92c01a7-4078-a83f-7442-a83509da99de', 'property_id': 'P180', 'item_id': 'Q53508249'} no iiff region with it
+    # {'snaktype': 'value', 'statement_id': 'Q1231009$a55dd5f6-40ed-cd02-8df5-7d26b0f701f1', 'property_id': 'P180', 'item_id': 'Q734844', 'iiif_region': 'pct:57.4,57.7,3,4.9', 'qualifier_hash': 'aee412f7c0171805747c6e40d008485badf8f0f5'} with iiff region
+
     return depicteds
 
 def entity_metadata(entity_data):
@@ -1063,7 +1145,7 @@ def query_dashboard(page_number):
                     LIMIT %d
                     OFFSET %d
                 }
-            }''' % (ENTRIES_PER_PAGE, (page_number - 1) * ENTRIES_PER_PAGE) # TODO: may have to fix the offset
+            }''' % (ENTRIES_PER_PAGE, (page_number - 1) * ENTRIES_PER_PAGE) 
 
     query_results = requests_session.get('https://query.wikidata.org/sparql', params={'query': query}).json()
 
@@ -1072,6 +1154,25 @@ def query_dashboard(page_number):
     for item in query_results['results']['bindings']:
         dashboard_item_ids.append(item['itemLabel']['value'])
     return dashboard_item_ids
+
+def get_userinfo():
+    """Returns userinfo for currently logged in wikidata user, return None if no logged in user"""
+    session = authenticated_session('www.wikidata.org')
+    if session is None:
+        userinfo = None
+    else:
+        try:
+            userinfo = session.get(action='query',
+                                   meta='userinfo')['query']['userinfo']
+        except mwapi.errors.APIError as e:
+            if e.code == 'mwoauth-invalid-authorization':
+                # e. g. consumer version updated, treat as not logged in
+                flask.session.pop('oauth_access_token')
+                userinfo = None
+            else:
+                raise e
+
+    return userinfo
 
 @app.after_request
 def denyFrame(response):
