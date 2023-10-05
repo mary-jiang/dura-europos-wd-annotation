@@ -42,7 +42,7 @@ depicted_properties = {
     # first label is used in dropdown,
     # second forms “… with no region specified” list label
     'P180': ['depicts', 'Depicted'],
-    'P9664': ['named place on map', 'Named places on map'],
+    # 'P9664': ['named place on map', 'Named places on map'],
     # note: currently, these must be item-type properties;
     # support for other data types (e.g. P1684 inscription) needs more work
 }
@@ -570,6 +570,16 @@ def api_add_qualifier_local(domain):
 
     return flask.jsonify(qualifier_hash=None)
 
+@app.route('/api/v1/delete_statement_local', methods=['POST'])
+def api_delete_statement_local():
+    statement_id = flask.request.form.get('statement_id')
+    if not statement_id:
+        return 'Incomplete form data', 400
+    
+    queries.query_db(queries.delete_statement(), params=[statement_id])
+    
+    return flask.jsonify({'success': True})
+    
 # https://iiif.io/api/image/2.0/#region
 @app.template_filter()
 def iiif_region_to_style(iiif_region):

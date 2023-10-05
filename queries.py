@@ -34,6 +34,10 @@ def add_statement():
     """Adds a statement into the statements table"""
     return "INSERT INTO statements (item_id, property_id, value_id, snaktype, username) VALUES (?, ?, ?, ?, ?)"
 
+def delete_statement():
+    """Deletes a statement by statement id from the statements table"""
+    return "DELETE FROM statements WHERE statement_id=?"
+
 def get_latest_statement():
     """Gets the last row in the statements table (usually the one you just inserted)"""
     return "SELECT statement_id FROM statements ORDER BY rowid DESC LIMIT 1"

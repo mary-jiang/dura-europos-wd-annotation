@@ -21,6 +21,7 @@ function setup() {
 
     function addEditButtons() {
         document.querySelectorAll('.wd-image-positions--depicted-without-region').forEach(addEditButton);
+        document.querySelectorAll('.wd-image-positions--depicted-without-region').forEach(addRemoveButton);
     }
 
     function addEditButton(element) {
@@ -126,6 +127,35 @@ function setup() {
                 cancelButton.remove();
                 cancelButton = null;
             }
+        }
+    }
+
+    function addRemoveButton(element) {
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.classList.add('btn', 'btn-secondary', 'btn-sm', 'ms-2');
+        button.textContent = 'delete statement';
+        button.addEventListener('click', onClick);
+        element.append(button);
+
+        function onClick() {
+            const statementId = element.dataset.statementId,
+                  formData = new FormData();
+            formData.append('statement_id', statementId);
+            element.remove()
+            fetch(`${baseUrl}/api/v1/delete_statement_local`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'include',
+            }).then(response => {
+                if (response.ok) {
+                   
+                } else {
+                    window.alert(`An error occurred: deleting statement with id ${statementId} failed`);
+                    throw new Error('Deleting failed');
+                }
+            });
         }
     }
 
@@ -516,6 +546,7 @@ function setup() {
                                 depicted.innerHTML = json.depicted_item_link;
                                 depictedsWithoutRegionList.append(depicted);
                                 addEditButton(depicted);
+                                addRemoveButton(depicted);
                             });
                         } else {
                             return response.text().then(error => {
