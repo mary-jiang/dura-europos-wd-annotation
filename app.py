@@ -544,6 +544,31 @@ def api_add_statement_local(domain):
     return flask.jsonify(depicted=depicted,
                          depicted_item_link=depicted_item_link(depicted))
 
+@app.route('/api/v2/add_qualifier_local/<domain>', methods=['POST'])
+def api_add_qualifier_local(domain):
+    statement_id = flask.request.form.get('statement_id')
+    iiif_region = flask.request.form.get('iiif_region')
+    csrf_token = flask.request.form.get('_csrf_token')
+    qualifier_hash = flask.request.form.get('qualifier_hash')  # optional
+    if not statement_id or not iiif_region or not csrf_token:
+        return 'Incomplete form data', 400
+
+    if csrf_token != flask.session['_csrf_token']:
+        return 'Wrong CSRF token (try reloading the page).', 403
+
+    if not flask.request.referrer.startswith(full_url('index')):
+        return 'Wrong Referer header', 403
+
+    if domain not in {'www.wikidata.org', 'commons.wikimedia.org'}:
+        return 'Unsupported domain', 403
+
+    session = authenticated_session(domain)
+    if session is None:
+        return 'Not logged in', 403
+    
+    queries.query_db(queries.add_qualifier(), params=[statement_id, iiif_region, (qualifier_hash if qualifier_hash else "")])
+
+    return flask.jsonify(qualifier_hash=None)
 
 # https://iiif.io/api/image/2.0/#region
 @app.template_filter()
@@ -633,7 +658,7 @@ def authentication_area():
             queries.query_db(queries.add_user(), params=[userinfo['name'], False])
         else:
             output = queries.jsonify_rows(result)[0]
-            if output['isProjectLead']:
+            if output['is_project_lead']:
                 role = "Project Lead "
     except Exception as ex:
         print(ex)
@@ -969,12 +994,17 @@ def depicted_items(entity_data, entity_id):
             }
             if row['snaktype'] == 'value':
                 depicted['item_id'] = row['value_id']
-            depicteds.append(depicted)
 
-    # TODO: once qualifiers are figured out then will have to connect them to the statements and them add them in here
-    # formatting
-    # {'snaktype': 'value', 'statement_id': 'Q1231009$e92c01a7-4078-a83f-7442-a83509da99de', 'property_id': 'P180', 'item_id': 'Q53508249'} no iiff region with it
-    # {'snaktype': 'value', 'statement_id': 'Q1231009$a55dd5f6-40ed-cd02-8df5-7d26b0f701f1', 'property_id': 'P180', 'item_id': 'Q734844', 'iiif_region': 'pct:57.4,57.7,3,4.9', 'qualifier_hash': 'aee412f7c0171805747c6e40d008485badf8f0f5'} with iiff region
+            # check to see if there is qualifer info attached
+            qualifier_result = queries.query_db(queries.get_qualifier_for_statement(), params=[row['statement_id']])
+            qualifiers_output = queries.jsonify_rows(qualifier_result)
+            if qualifiers_output:
+                # only should be 1 qualifier for each statement
+                qualifier = qualifiers_output[0]
+                depicted['iiif_region'] = qualifier['iiif_region']
+                depicted['qualifier_hash'] = qualifier['qualifier_hash']
+
+            depicteds.append(depicted)
 
     return depicteds
 

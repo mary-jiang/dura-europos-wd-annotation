@@ -24,11 +24,11 @@ def query_db(query, params=None, database_url=DATABASE_URL):
 # sqlite queries
 def is_project_lead():
     """Returns true or false (1 or 0) for if the given username is a project lead"""
-    return "SELECT isprojectlead FROM users WHERE username = ?"
+    return "SELECT is_project_lead FROM users WHERE username = ?"
 
 def add_user():
     """Adds a user into the users table as a contributor by default"""
-    return "INSERT INTO users (username, isprojectlead) VALUES (?, ?)"
+    return "INSERT INTO users (username, is_project_lead) VALUES (?, ?)"
 
 def add_statement():
     """Adds a statement into the statements table"""
@@ -41,3 +41,14 @@ def get_latest_statement():
 def get_object_statements():
     """Selects all locally saved statements for an object based on what user is logged in"""
     return "SELECT * FROM statements WHERE item_id=? and username=?"
+
+def add_qualifier():
+    """Adds a qualifier (associated with some statement) into the qualifiers table with qualifier hash"""
+    return '''INSERT INTO qualifiers (statement_id, iiif_region, qualifier_hash) VALUES (?, ?, ?)
+              ON CONFLICT(statement_id) DO UPDATE
+              SET iiif_region = EXCLUDED.iiif_region,
+                  qualifier_hash = EXCLUDED.qualifier_hash;'''
+
+def get_qualifier_for_statement():
+    """Queries the qualifier assocatied with a statement based on statement id"""
+    return "SELECT * from qualifiers WHERE statement_id=?"

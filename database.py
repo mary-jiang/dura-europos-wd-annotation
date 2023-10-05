@@ -9,7 +9,7 @@ class Users(Base):
     __tablename__ = 'users'
 
     username = Column(String, primary_key=True)
-    isProjectLead = Column(Boolean, default=False)
+    is_project_lead = Column(Boolean, default=False)
 
 class Statements(Base):
     """This table will hold information for locally stored statements about wikidata objects"""
@@ -29,5 +29,5 @@ class Qualifiers(Base):
     __tablename__ = 'qualifiers'
 
     statement_id = Column(String, primary_key=True)
-    iiff_region = Column(String)
+    iiif_region = Column(String)
     qualifier_hash = Column(String, nullable=True)

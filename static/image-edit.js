@@ -195,7 +195,7 @@ function setup() {
         }
         formData.append('iiif_region', iiifRegion);
         formData.append('_csrf_token', csrfToken);
-        return fetch(`${baseUrl}/api/v2/add_qualifier/${subject.domain}`, {
+        return fetch(`${baseUrl}/api/v2/add_qualifier_local/${subject.domain}`, {
             method: 'POST',
             body: formData,
             credentials: 'include',
