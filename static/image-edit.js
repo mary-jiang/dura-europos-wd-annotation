@@ -86,11 +86,18 @@ function setup() {
                 const propertyId = [...element.closest('.wd-image-positions--depicteds-without-region').classList]
                       .filter(klass => klass.startsWith('wd-image-positions--depicteds-without-region__'))
                       .map(klass => klass.slice('wd-image-positions--depicteds-without-region__'.length))[0];
-                depicted.classList.add(`wd-image-positions--depicted__${propertyId}`)
+                depicted.dataset.statementId = element.dataset.statementId;
+                if (depicted.dataset.statementId.includes("Q")) {
+                    console.log("HERE")
+                    depicted.classList.add(`wd-image-positions--depicted__${propertyId}`)
+                } else {
+                    console.log("HERE 2")
+                    depicted.classList.add(`wd-image-positions--depicted__local`)
+                }
                 if (depictedId !== undefined) {
                     depicted.dataset.entityId = depictedId;
                 }
-                depicted.dataset.statementId = element.dataset.statementId;
+
                 depicted.append(element.firstChild.cloneNode(true));
                 image.append(depicted);
                 button.textContent = 'editing statement…';
@@ -131,6 +138,9 @@ function setup() {
     }
 
     function addRemoveButton(element) {
+        if (element.dataset.statementId.includes("Q")) {
+            return 
+        }
 
         const button = document.createElement('button');
         button.type = 'button';
@@ -152,7 +162,7 @@ function setup() {
                 if (response.ok) {
                    
                 } else {
-                    window.alert(`An error occurred: deleting statement with id ${statementId} failed`);
+                    window.alert(`An error occurred: deleting statement with id ${statementId} failed. This could be because it is not a local statement.`);
                     throw new Error('Deleting failed');
                 }
             });
@@ -440,11 +450,13 @@ function setup() {
                         new_depicted.innerHTML = json.depicted_item_link;
                         depictedsWithoutRegionList.append(new_depicted);
                         addEditButton(new_depicted);
-                        addRemoveButton(new_depicted);
+                        if (!String(statementId).includes("Q")) {
+                            addRemoveButton(new_depicted);
+                        }
                     });
                     
                 } else {
-                    window.alert(`An error occurred: deleting qualifier with statement id ${statementId} failed`);
+                    window.alert(`An error occurred: deleting qualifier with statement id ${statementId} failed. This may be because it is a qualifier that has already been posted on wikidata.`);
                     throw new Error('Deleting failed');
                 }
             });

@@ -35,12 +35,9 @@
     --color: 255, 215, 0;
 }
 
-.wd-image-positions--depicted__P9664 {
-    /*
-     * named place on map (P9664): fuchsia
-     */
-    --color: rgb(255, 215, 0); /*Note to self, not sure why locally saved things use this class*/
-    --color: 255, 215, 0;
+.wd-image-positions--depicted__local {
+    --color: rgb(74, 63, 224);
+    --color: 74, 63, 224;
 }
 
 .wd-image-positions--depicted:hover {
