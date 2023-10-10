@@ -265,6 +265,7 @@ function setup() {
         cancelButton.textContent = 'cancel';
         const buttonWrapper = document.createElement('div');
         buttonWrapper.append(button);
+        addRemoveRegionButton(entityElement, buttonWrapper)
         // cancelButton is not appended yet
         entityElement.append(buttonWrapper);
         const fieldSet = entityElement.querySelector('fieldset');
@@ -370,6 +371,98 @@ function setup() {
         }
     }
 
+    function addRemoveRegionButton(entityElement, buttonWrapper) {
+        const wrapper = entityElement.querySelector('.wd-image-positions--wrapper');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.classList.add('btn', 'btn-secondary');
+        button.textContent = 'Remove a region';
+        button.addEventListener('click', addDeleteRegionListeners);
+        buttonWrapper.append(button)
+
+        let onKeyDown = null;
+        let cancelButton = null;
+        cancelButton = document.createElement('button');
+        cancelButton.type = 'button';
+        cancelButton.classList.add('btn', 'btn-secondary', 'btn-sm', 'wd-image-positions--active', 'ms-2');
+        cancelButton.textContent = 'cancel';
+
+        function addDeleteRegionListeners() {
+            button.textContent = 'Select a region to remove';
+            button.classList.add('wd-image-positions--active');
+            for (const depicted of entityElement.querySelectorAll('.wd-image-positions--depicted')) {
+                depicted.addEventListener('click', deleteRegion);
+            }
+            button.removeEventListener('click', addDeleteRegionListeners);
+            
+            cancelButton.addEventListener('click', cancelDeleteRegion);
+            buttonWrapper.append(cancelButton);
+        }
+
+        function deleteRegion(event) {
+            event.preventDefault();
+            for (const depicted of entityElement.querySelectorAll('.wd-image-positions--depicted')) {
+                depicted.removeEventListener('click', deleteRegion);
+            }
+            
+            const depicted = event.target.closest('.wd-image-positions--depicted');
+            const statementId = depicted.getAttribute("data-statement-id"),
+                  formData = new FormData();
+            formData.append("statement_id", statementId)
+            depicted.remove()
+            fetch(`${baseUrl}/api/v2/delete_qualifier_local`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'include',
+            }).then(response => {
+                if (response.ok) {
+                    return response.json().then(json => {
+                        const statementId = json.depicted.statement_id;
+                        const propertyId = json.depicted.property_id;
+                        let depictedsWithoutRegionList = entityElement.querySelector(
+                            `.wd-image-positions--depicteds-without-region__${propertyId} ul`,
+                        );
+                        if (!depictedsWithoutRegionList) {
+                            const depictedsWithoutRegionDiv = document.createElement('div'),
+                                    depictedsWithoutRegionText = document.createTextNode(
+                                        `${depictedProperties[propertyId]?.[1] || propertyId} with no region specified:`,
+                                    );
+                            depictedsWithoutRegionList = document.createElement('ul');
+                            depictedsWithoutRegionDiv.classList.add('wd-image-positions--depicteds-without-region');
+                            depictedsWithoutRegionDiv.classList.add(`wd-image-positions--depicteds-without-region__${propertyId}`);
+                            depictedsWithoutRegionDiv.append(depictedsWithoutRegionText, depictedsWithoutRegionList);
+                            const newDepictedFormRoot = document.getElementById('new-depicted-form-root')
+                            newDepictedFormRoot.insertAdjacentElement('beforebegin', depictedsWithoutRegionDiv);
+                        }
+                        const new_depicted = document.createElement('li');
+                        new_depicted.classList.add('wd-image-positions--depicted-without-region');
+                        new_depicted.dataset.statementId = statementId;
+                        new_depicted.innerHTML = json.depicted_item_link;
+                        depictedsWithoutRegionList.append(new_depicted);
+                        addEditButton(new_depicted);
+                        addRemoveButton(new_depicted);
+                    });
+                    
+                } else {
+                    window.alert(`An error occurred: deleting qualifier with statement id ${statementId} failed`);
+                    throw new Error('Deleting failed');
+                }
+            });
+
+            cancelDeleteRegion()
+        }
+
+        function cancelDeleteRegion() {
+            for (const depicted of entityElement.querySelectorAll('.wd-image-positions--depicted')) {
+                depicted.removeEventListener('click', deleteRegion);
+            }
+            button.textContent = 'Remove a region';
+            button.addEventListener('click', addDeleteRegionListeners);
+            document.removeEventListener('keydown', onKeyDown);
+            cancelButton.remove();
+        }
+    }
+
     function addNewDepictedForm(entityElement) {
         const session = new Session( 'www.wikidata.org', {
             formatversion: 2,
@@ -381,6 +474,7 @@ function setup() {
               subjectId = entity.dataset.entityId,
               subjectDomain = entity.dataset.entityDomain,
               newDepictedFormRoot = document.createElement('div');
+        newDepictedFormRoot.setAttribute("id", "new-depicted-form-root")
         entityElement.append(newDepictedFormRoot);
 
         createApp({

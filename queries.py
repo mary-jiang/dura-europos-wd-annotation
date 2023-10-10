@@ -38,6 +38,10 @@ def delete_statement():
     """Deletes a statement by statement id from the statements table"""
     return "DELETE FROM statements WHERE statement_id=?"
 
+def get_statement():
+    """Queries a statement by statement id from the statements table"""
+    return """SELECT * from statements WHERE statement_id=?"""
+
 def get_latest_statement():
     """Gets the last row in the statements table (usually the one you just inserted)"""
     return "SELECT statement_id FROM statements ORDER BY rowid DESC LIMIT 1"
@@ -52,6 +56,10 @@ def add_qualifier():
               ON CONFLICT(statement_id) DO UPDATE
               SET iiif_region = EXCLUDED.iiif_region,
                   qualifier_hash = EXCLUDED.qualifier_hash;'''
+
+def delete_qualifier():
+    """Deletes a qualifier based on statement_id"""
+    return "DELETE FROM qualifiers WHERE statement_id=?"
 
 def get_qualifier_for_statement():
     """Queries the qualifier assocatied with a statement based on statement id"""

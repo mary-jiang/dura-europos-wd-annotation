@@ -539,8 +539,6 @@ def api_add_statement_local(domain):
     result = queries.query_db(queries.get_latest_statement())
     statement_id = queries.jsonify_rows(result)[0]['statement_id']
     depicted['statement_id'] = statement_id
-    print(statement_id)
-    print(depicted)
     return flask.jsonify(depicted=depicted,
                          depicted_item_link=depicted_item_link(depicted))
 
@@ -579,7 +577,39 @@ def api_delete_statement_local():
     queries.query_db(queries.delete_statement(), params=[statement_id])
     
     return flask.jsonify({'success': True})
+
+@app.route('/api/v2/delete_qualifier_local', methods=['POST'])
+def api_delete_qualifier_local():
+    statement_id = flask.request.form.get('statement_id')
+    if not statement_id:
+        return 'Incomplete form data', 400
+
+    queries.query_db(queries.delete_qualifier(), params=[statement_id])
     
+    statement = queries.jsonify_rows(queries.query_db(queries.get_statement(), params=[statement_id]))[0]
+    language_codes = request_language_codes()   
+    depicted = {
+            'snaktype': statement['snaktype'],
+            'statement_id': statement['statement_id'],
+            'property_id': statement['property_id'],
+    }
+    if statement['snaktype'] == 'value':
+        value = json.dumps({'entity-type': 'item', 'id': statement['value_id']})
+        depicted['item_id'] = statement['value_id']
+        labels = load_labels([statement['value_id']], language_codes)
+        depicted['label'] = labels[statement['value_id']]
+    else:
+        value = None
+        if statement['snaktype'] == 'somevalue':
+            depicted['label'] = messages.somevalue(language_codes[0])
+        elif statement['snaktype'] == 'novalue':
+            depicted['label'] = messages.novalue(language_codes[0])
+        else:
+            raise ValueError('Unknown snaktype')
+  
+    return flask.jsonify(depicted=depicted,
+                         depicted_item_link=depicted_item_link(depicted))
+
 # https://iiif.io/api/image/2.0/#region
 @app.template_filter()
 def iiif_region_to_style(iiif_region):
