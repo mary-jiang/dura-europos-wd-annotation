@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block main %}
+<h2>Permissions</h2>
+
+{% if is_logged_in == True %}
+    {% if is_project_lead == True %}
+        <p>Requests for project lead:</p>
+        {% for username in users %}
+            <script>
+                baseUrl = document.querySelector('link[rel=index]').href.replace(/\/$/, '');
+                function approveUser(username) {
+                    const formData = new FormData();
+                    formData.append('username', username)
+                    fetch(`${baseUrl}/permissions/approve`, {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'include',
+                    }).then(response => {
+                        if (response.ok) {
+                            // delete the item itself
+                            document.querySelectorAll(`.${username}`).forEach(e => e.remove())
+                        } else {
+                            window.alert(`an error occured with approving`);
+                            throw new Error('approving failed');
+                        }
+                    });
+                }
+            </script>
+            <p style="display: inline-block;" class="{{username}}">{{username}}</p> <button class='btn btn-secondary btn-sm ms-2 {{username}}' onClick="approveUser('{{username}}')">Approve</button>
+            <br>
+        {% endfor%}
+    {% else %}
+        {% if already_requested == True %}
+            <p>You have already requested permission.</p>
+        {% else %}
+        <p id ="request-label">If you want to request project lead status, click the button below:</p>
+        <script>
+        const baseUrl = document.querySelector('link[rel=index]').href.replace(/\/$/, '');
+        function requestStatus() {
+            fetch(`${baseUrl}/permissions/request`, {
+            method: 'POST',
+            credentials: 'include',
+            }).then(response => {
+                if (response.ok) {
+                    // TODO: change the UI here to something else (you have already requested)
+                    button = document.getElementById("request-btn");
+                    label = document.createElement("p");
+                    label.innerHTML = "You have already requested permission."
+                    button.insertAdjacentElement('beforebegin', label);
+                    button.remove();
+                    document.getElementById("request-label").remove();
+                } else {
+                    window.alert(`error with requesting permission`);
+                    throw new Error('requesting failed');
+                }
+            });
+        }
+        </script>
+        <button class='btn btn-secondary btn-sm ms-2' onClick="requestStatus()" id="request-btn">Request Project Lead Status</button>
+        {% endif %}
+       
+    {% endif%}
+
+{% else %}
+<h3>You are not logged in. Please login to gain access to this feature.</h3>
+{% endif %}
+
+
+
+{% endblock main %}

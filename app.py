@@ -594,12 +594,10 @@ def api_delete_qualifier_local():
             'property_id': statement['property_id'],
     }
     if statement['snaktype'] == 'value':
-        value = json.dumps({'entity-type': 'item', 'id': statement['value_id']})
         depicted['item_id'] = statement['value_id']
         labels = load_labels([statement['value_id']], language_codes)
         depicted['label'] = labels[statement['value_id']]
     else:
-        value = None
         if statement['snaktype'] == 'somevalue':
             depicted['label'] = messages.somevalue(language_codes[0])
         elif statement['snaktype'] == 'novalue':
@@ -609,6 +607,47 @@ def api_delete_qualifier_local():
   
     return flask.jsonify(depicted=depicted,
                          depicted_item_link=depicted_item_link(depicted))
+
+@app.route('/permissions')
+def permissions():
+    userinfo = get_userinfo()
+    is_logged_in = False
+    is_project_lead = False
+    already_requested = False
+    users = []
+    if userinfo:
+        result = queries.query_db(queries.is_project_lead(), params=[userinfo['name']]) 
+        output = queries.jsonify_rows(result)[0]
+        if output['is_project_lead'] == 1:
+            is_project_lead = True
+            result = queries.query_db(queries.get_all_project_lead_requests())
+            output = queries.jsonify_rows(result)
+            for row in output:
+                users.append(row['username'])
+        else:
+            result = queries.query_db(queries.get_request_status(), params=[userinfo['name']])
+            output = queries.jsonify_rows(result)[0]
+            if output['requested_lead_status'] == 1:
+                already_requested = True
+        is_logged_in = True
+
+    return flask.render_template('permissions.html', is_logged_in=is_logged_in, is_project_lead=is_project_lead, users=users, already_requested=already_requested)
+
+@app.route('/permissions/request', methods=["POST"])
+def permissions_request():
+    # this is can only be called by a logged in contributor
+    userinfo = get_userinfo()
+    queries.query_db(queries.request_project_lead(), params=[userinfo['name']])
+    return flask.jsonify({'success': True})
+
+@app.route('/permissions/approve', methods=['POST'])
+def permissions_approve():
+    # this can only be called by a logged in project lead
+    username = flask.request.form.get('username')
+    queries.query_db(queries.set_project_lead(), params=[username])
+    # make sure that we derequest the user as we already approved them
+    queries.query_db(queries.unrequest_project_lead(), params=[username])
+    return flask.jsonify({'success': True})
 
 # https://iiif.io/api/image/2.0/#region
 @app.template_filter()
@@ -695,7 +734,7 @@ def authentication_area():
         result = queries.query_db(queries.is_project_lead(), params=[userinfo['name']]) 
         if not result:
             # if not in userbase then add as contributor
-            queries.query_db(queries.add_user(), params=[userinfo['name'], False])
+            queries.query_db(queries.add_user(), params=[userinfo['name'], False, False])
         else:
             output = queries.jsonify_rows(result)[0]
             if output['is_project_lead']:

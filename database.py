@@ -10,6 +10,7 @@ class Users(Base):
 
     username = Column(String, primary_key=True)
     is_project_lead = Column(Boolean, default=False)
+    requested_lead_status = Column(Boolean, default=False)
 
 class Statements(Base):
     """This table will hold information for locally stored statements about wikidata objects"""

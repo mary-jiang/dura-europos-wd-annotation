@@ -28,7 +28,27 @@ def is_project_lead():
 
 def add_user():
     """Adds a user into the users table as a contributor by default"""
-    return "INSERT INTO users (username, is_project_lead) VALUES (?, ?)"
+    return "INSERT INTO users (username, is_project_lead, requested_lead_status) VALUES (?, ?, ?)"
+
+def set_project_lead():
+    """Sets a user to be a project lead by their username"""
+    return "UPDATE users SET is_project_lead = 1 WHERE username=?"
+
+def request_project_lead():
+    """Sends in a request to ask to be a project lead by username"""
+    return "UPDATE users SET requested_lead_status = 1 WHERE username=?"
+
+def unrequest_project_lead():
+    """Removes request for project lead request by username"""
+    return "UPDATE users SET requested_lead_status = 0 WHERE username=?"
+
+def get_request_status():
+    """Returns if a specificed user has request project lead status by username"""
+    return "SELECT requested_lead_status from users WHERE username=?"
+
+def get_all_project_lead_requests():
+    """Returns all of the users that have requested to be a project lead"""
+    return "SELECT username FROM users WHERE requested_lead_status = 1"
 
 def add_statement():
     """Adds a statement into the statements table"""
