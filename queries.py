@@ -84,3 +84,15 @@ def delete_qualifier():
 def get_qualifier_for_statement():
     """Queries the qualifier assocatied with a statement based on statement id"""
     return "SELECT * from qualifiers WHERE statement_id=?"
+
+def get_all_annotated_objects():
+    """Returns all of the item_id, username pair tuple for locally annotated objects"""
+    return "SELECT statement_id, item_id, username from statements"
+
+def get_comments():
+    """Returns comment associated with an item_id, username, project_lead_username tuple"""
+    return "SELECT statement_id, comment, project_lead_username FROM comments WHERE project_lead_username=? and item_id=? and username=?"
+
+def add_comment():
+    """Adds a comment to the comment database"""
+    return "INSERT INTO comments (statement_id, comment, project_lead_username, item_id, username) VALUES (?, ?, ?, ?, ?)"

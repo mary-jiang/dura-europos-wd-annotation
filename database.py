@@ -32,3 +32,14 @@ class Qualifiers(Base):
     statement_id = Column(String, primary_key=True)
     iiif_region = Column(String)
     qualifier_hash = Column(String, nullable=True)
+
+class Comments(Base):
+    """This table holds information about the comments that project leads leave on specific statements."""
+    __tablename__ = 'comments'
+
+    comment_id = Column(Integer, primary_key=True, autoincrement=True)
+    statement_id = Column(String)
+    comment = Column(String)
+    project_lead_username = Column(String)
+    item_id = Column(String)
+    username = Column(String)

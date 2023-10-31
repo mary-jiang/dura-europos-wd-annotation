@@ -5,7 +5,6 @@ import Session, { set } from 'm3api/browser.js';
 
 function setup() {
     'use strict';
-
     const csrfTokenElement = document.getElementById('csrf_token'),
           baseUrl = document.querySelector('link[rel=index]').href.replace(/\/$/, ''),
           depictedProperties = JSON.parse(document.getElementsByTagName('main')[0].dataset.depictedProperties);

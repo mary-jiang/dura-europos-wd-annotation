@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block main %}
+<link rel="stylesheet" type="text/css" href="../static/dashboard.css" />
+<div class="flex-grid">
+{% for key in objects.keys() %}
+    <div class="col">
+        <img src="{{objects_info[key]['image_url']}}">
+        <p>{{key}}</p>
+        <p>Annotated by:</p>
+        <ul>
+        {% for user in objects[key] %}
+            <li><a href="{{url_for('comment', item_id=key, username=user)}}">{{user}}</a></li>
+        {% endfor %}
+        </ul>
+    </div>
+{% endfor %}
+</div>
+{% endblock %}

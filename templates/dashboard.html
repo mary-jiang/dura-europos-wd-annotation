@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block main %}
+<link rel="stylesheet" type="text/css" href="../static/dashboard.css" />
 <h2>Dashboard</h2>
 {% set curPage = url_for(request.endpoint, **request.view_args).replace("/dashboard/", "") | int %}
 {% for i in range(1, 31)%}
@@ -9,12 +10,14 @@
         <a href="{{url_for('dashboard', page=i)}}">{{i}}</a>
     {%endif%}
 {% endfor%}
+<div class="flex-grid">
 {% for item in entries%}
-<div>
-    <a href="{{url_for('item', item_id=item['item_id'])}}">
-    <img src="{{item['image_url']}}">
-    <p>{{item['image_title']}}</p>
-    </a>
-</div>
+    <div class = "col">
+        <a href="{{url_for('item', item_id=item['item_id'])}}">
+        <img src="{{item['image_url']}}">
+        <p>{{item['image_title']}}</p>
+        </a>
+    </div>
 {% endfor %}
+</div>
 {% endblock main %}

@@ -484,6 +484,40 @@ def dashboard(page):
 
     return flask.render_template('dashboard.html', entries=processed_entries)
 
+@app.route('/projectleaddashboard')
+def project_lead_dashboard():
+    if deny_access():
+        return flask.render_template('no-access.html')
+    # fetch all objects thathave been annotated
+    result = queries.query_db(queries.get_all_annotated_objects())
+    output = queries.jsonify_rows(result)
+    objects = {} # key = object id, value = set of users who annotated that object
+
+    for row in output:
+        item_id = row['item_id']
+        if objects.get(item_id) is None:
+            objects[item_id] = set()
+        objects[item_id].add(row['username'])
+
+    # need to get the images and stuff of each object
+    objects_info = {}
+    language_codes = request_language_codes()
+    props = ['claims']
+    session = anonymous_session('www.wikidata.org')
+    api_response = session.get(action='wbgetentities',
+                               props=props,
+                               ids=list(objects.keys()),
+                               languages=language_codes)
+    for key in objects.keys():
+        entry = {
+            'item_id': key
+        }
+        image_datavalue = best_value(api_response['entities'][key], default_property)
+        entry.update(load_image(image_datavalue['value'], language_codes))
+        objects_info[key] = entry
+
+    return flask.render_template('project-lead-dashboard.html', objects=objects, objects_info=objects_info)
+
 @app.route('/api/v1/add_statement_local/<domain>', methods=['POST'])
 def api_add_statement_local(domain):
     language_codes = request_language_codes()
@@ -608,6 +642,33 @@ def api_delete_qualifier_local():
     return flask.jsonify(depicted=depicted,
                          depicted_item_link=depicted_item_link(depicted))
 
+@app.route("/api/v2/add_comment", methods=['POST'])
+def api_add_comment():
+    statement_id = flask.request.form.get('statement_id')
+    comment = flask.request.form.get('comment')
+    item_id = flask.request.form.get('item_id')
+    username = flask.request.form.get('username')
+
+    userinfo = get_userinfo()
+    if not userinfo:
+        return 'Not logged in', 403
+    project_lead_username = userinfo['name']
+
+    queries.query_db(queries.add_comment(), params=[statement_id, comment, project_lead_username, item_id, username])
+    return flask.jsonify(project_lead_username=project_lead_username, comment=comment, statement_id=statement_id)
+
+@app.route('/api/v2/get_comments', methods=["POST"])
+def api_get_comments():
+    item_id = flask.request.form.get('item_id')
+    username = flask.request.form.get('username')
+    userinfo = get_userinfo()
+    if not userinfo:
+        return 'Not logged in', 403
+    project_lead_username = userinfo['name']
+
+    result = queries.query_db(queries.get_comments(), params=[project_lead_username, item_id, username])
+    return queries.jsonify_rows(result)
+
 @app.route('/permissions')
 def permissions():
     userinfo = get_userinfo()
@@ -648,6 +709,14 @@ def permissions_approve():
     # make sure that we derequest the user as we already approved them
     queries.query_db(queries.unrequest_project_lead(), params=[username])
     return flask.jsonify({'success': True})
+
+@app.route('/comment/<item_id>/<username>')
+def comment(item_id, username):
+    if deny_access():
+        return flask.render_template('no-access.html')
+
+    item = load_item_and_property(item_id=item_id, property_id=default_property, include_depicteds=True, local_only=True, username=username)
+    return flask.render_template('comment.html', **item)
 
 # https://iiif.io/api/image/2.0/#region
 @app.template_filter()
@@ -754,6 +823,21 @@ def authentication_area():
 def user_logged_in():
     return 'oauth_access_token' in flask.session
 
+@app.template_global()
+def project_lead_area():
+    # only show this if someone is a project lead
+    userinfo = get_userinfo()
+    if userinfo:
+        result = queries.query_db(queries.is_project_lead(), params=[userinfo['name']]) 
+        if not result:
+            # if not in userbase then add as contributor
+            queries.query_db(queries.add_user(), params=[userinfo['name'], False, False])
+        else:
+            output = queries.jsonify_rows(result)[0]
+            if output['is_project_lead']:
+                return True
+    return False
+    
 @app.errorhandler(WrongDataValueType)
 def handle_wrong_data_value_type(error):
     response = flask.render_template('wrong-data-value-type.html',
@@ -763,7 +847,7 @@ def handle_wrong_data_value_type(error):
 
 
 def load_item_and_property(item_id, property_id,
-                           include_depicteds=False, include_description=False, include_metadata=False):
+                           include_depicteds=False, include_description=False, include_metadata=False, local_only=False, username=None):
     language_codes = request_language_codes()
 
     props = ['claims']
@@ -797,7 +881,11 @@ def load_item_and_property(item_id, property_id,
         item.update(load_image(image_title, language_codes))
 
     if include_depicteds:
-        depicteds = depicted_items(item_data, item_id)
+        if local_only and username:
+            depicteds = []
+            append_local_depicteds(depicteds, item_id, username)
+        else:
+            depicteds = depicted_items(item_data, item_id)
         for depicted in depicteds:
             if 'item_id' in depicted:
                 entity_ids.append(depicted['item_id'])
@@ -1061,10 +1149,16 @@ def depicted_items(entity_data, entity_id):
 
     # user must be logged in to see their own personal annotations
     userinfo = get_userinfo()
-    if userinfo is not None:
-        username = userinfo['name']
-        result = queries.query_db(queries.get_object_statements(), params=[entity_id, username])
-        output = queries.jsonify_rows(result)
+    if userinfo:
+        append_local_depicteds(depicteds, entity_id, userinfo['name'])
+
+    return depicteds
+
+def append_local_depicteds(depicteds, entity_id, username):
+    # appends local depicted items to a passed in depicted list for a certain username + entity id
+    result = queries.query_db(queries.get_object_statements(), params=[entity_id, username])
+    output = queries.jsonify_rows(result)
+    for property_id in depicted_properties:
         for row in output:
             depicted = {
                 'snaktype': row['snaktype'],
@@ -1084,8 +1178,6 @@ def depicted_items(entity_data, entity_id):
                 depicted['qualifier_hash'] = qualifier['qualifier_hash']
 
             depicteds.append(depicted)
-
-    return depicteds
 
 def entity_metadata(entity_data):
     # property IDs based on https://www.wikidata.org/wiki/Wikidata:WikiProject_Visual_arts/Item_structure#Describing_individual_objects
@@ -1282,6 +1374,20 @@ def get_userinfo():
                 raise e
 
     return userinfo
+
+def deny_access():
+    userinfo = get_userinfo()
+    if not userinfo:
+        return True
+    result = queries.query_db(queries.is_project_lead(), params=[userinfo['name']]) 
+    if not result:
+        # if not in userbase then add as contributor
+        return True
+    else:
+        output = queries.jsonify_rows(result)[0]
+        if output['is_project_lead'] == 0:
+            return True
+    return False
 
 @app.after_request
 def denyFrame(response):
