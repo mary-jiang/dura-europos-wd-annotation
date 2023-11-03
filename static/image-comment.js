@@ -23,7 +23,6 @@ function setup() {
         }).then(response => {
             if (response.ok) {
                 return response.json().then(json => {
-                    console.log(json)
                     json.forEach(item => addCommentLabel(item.statement_id, item.project_lead_username, item.comment))
                 });
             } else {
@@ -41,13 +40,30 @@ function setup() {
             commentList = document.createElement('ul');
             commentList.setAttribute('id', `comment-list-${statementId}`)
             const parent = document.querySelector(`[data-statement-id="${statementId}"]`);
-            parent.appendChild(commentList);
-        }
-        let comment_item = document.createElement('li');
-        let comment_text = document.createTextNode(`${projectLeadUsername}: ${comment}`);
-        comment_item.appendChild(comment_text);
+            if (parent.classList.contains('wd-image-positions--depicted-without-region')) {
+                parent.appendChild(commentList);
+            } else {
+                let title = parent.children[0].text
+                console.log(comment)
+                let regionParent = document.querySelector(`#region-comment-list-${statementId}`);
+                if (!regionParent) {
+                    regionParent = document.createElement('ul');
+                    let mainBulletPoint = document.createElement('li');
+                    let mainBulletPointText = document.createTextNode(title);
+                    mainBulletPoint.appendChild(mainBulletPointText);
+                    regionParent.appendChild(mainBulletPoint);
+                    mainBulletPoint.append(commentList);
+                    regionParent.setAttribute('id', `region-comment-list-${statementId}`);
+                    document.querySelector('#region-comment-list-div').append(regionParent);
+                }
 
-        commentList.append(comment_item);
+            }
+        }
+        let commentItem = document.createElement('li');
+        let commentText = document.createTextNode(`${projectLeadUsername}: ${comment}`);
+        commentItem.appendChild(commentText);
+
+        commentList.append(commentItem);
     }
 
     function addCommentButton(element) {
@@ -88,14 +104,11 @@ function setup() {
                 credentials: 'include',
             }).then(response => {
                 if (response.ok) {
-                    // TODO: append the statement into here
                     document.getElementById(`span-${element.dataset.statementId}`).innerHTML = ""
-                    // TODO: return the statement id too, use that to grab the whatever and add the comment below that
                     return response.json().then(json => {
                         const comment = json.comment;
                         const projectLeadUsername = json.project_lead_username;
                         const statementId = json.statement_id;
-                        // console.log(comment, projectLeadUsername)
                         addCommentLabel(statementId, projectLeadUsername, comment)
                     });
                 } else {
@@ -106,10 +119,149 @@ function setup() {
             });
         }
     }
+    
+    function addCommentOnRegionButton(entityElement) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.classList.add('btn', 'btn-secondary');
+        button.textContent = 'Comment on a region';
+        button.addEventListener('click', addCommentRegionListeners);
+        const buttonWrapper = document.createElement('div');
+        buttonWrapper.append(button);
+        entityElement.append(buttonWrapper);
+
+        let onKeyDown = null;
+        let cancelButton = null;
+        cancelButton = document.createElement('button');
+        cancelButton.type = 'button';
+        cancelButton.classList.add('btn', 'btn-secondary', 'btn-sm', 'wd-image-positions--active', 'ms-2');
+        cancelButton.textContent = 'cancel';
+
+        function addCommentRegionListeners() {
+            button.textContent = "Select a region on comment on";
+            button.classList.add('wd-image-positions--active')
+            for (const depicted of entityElement.querySelectorAll('.wd-image-positions--depicted')) {
+                depicted.addEventListener('click', commentRegion);
+            }
+            button.removeEventListener('click', addCommentRegionListeners);
+
+            cancelButton.addEventListener('click', cancelCommentRegion);
+            buttonWrapper.append(cancelButton)
+        }
+
+        function commentRegion(event) {
+            event.preventDefault();
+            for (const depicted of entityElement.querySelectorAll('.wd-image-positions--depicted')) {
+                depicted.removeEventListener('click', commentRegion);
+            }
+            const depicted = event.target.closest('.wd-image-positions--depicted');
+            const statementId = depicted.getAttribute("data-statement-id"),
+                  title = depicted.getAttribute("title"),
+                  formData = new FormData();
+            formData.append('statement_id', statementId)
+
+
+            const entityDiv = document.querySelector(".wd-image-positions--entity");
+            const itemId = entityDiv.getAttribute('data-entity-id');
+            const username = window.location.href.substring(window.location.href.lastIndexOf("/") + 1);
+            formData.append('item_id', itemId);
+            formData.append('username', username);
+
+            const statementsList = document.querySelector(".wd-image-positions--depicteds-without-region")
+
+            const label = document.createElement('h4');
+            label.innerHTML = `Commenting on region with label: ${title}`;
+            label.classList.add('region-comment-input');
+            const span = document.createElement('span');
+            span.classList.add('input-span', 'region-comment-input');
+            span.setAttribute('id', 'region-comment-input-span');
+            span.setAttribute('contenteditable', 'true');
+            const submitButton = document.createElement('button');
+            submitButton.type = 'button';
+            submitButton.classList.add('btn', 'btn-secondary','btn-sm', 'ms-2', 'region-comment-input');
+            submitButton.textContent = 'Submit Comment';
+            submitButton.addEventListener('click', onClick);
+            const brk = document.createElement('br');
+
+            function onClick() {
+                const comment = document.querySelector('#region-comment-input-span').innerHTML;
+                formData.append('comment', comment);
+
+                return fetch(`${baseUrl}/api/v2/add_comment`, {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'include',
+                }).then(response => {
+                    if (response.ok) {
+                        document.querySelector('#region-comment-input-span').innerHTML = ""
+                        return response.json().then(json => {
+                            const comment = json.comment;
+                            const projectLeadUsername = json.project_lead_username;
+                            const statementId = json.statement_id;
+                            addCommentLabel(statementId, projectLeadUsername, comment)
+                            document.querySelectorAll(".region-comment-input").forEach(e => e.remove());
+                        });
+                    } else {
+                        return response.text().then(error => {
+                            window.alert(`An error occurred:\n\n${error}`);
+                        });
+                    }
+                });
+            }
+
+            statementsList.prepend(brk)
+            statementsList.prepend(submitButton)
+            statementsList.prepend(span);
+            statementsList.prepend(label)
+
+            cancelCommentRegion();
+        }
+
+        function cancelCommentRegion() {
+            for (const depicted of entityElement.querySelectorAll('.wd-image-positions--depicted')) {
+                depicted.removeEventListener('click', commentRegion);
+            }
+            button.textContent = 'Comment on a region';
+            button.addEventListener('click', addCommentRegionListeners);
+            document.removeEventListener('keydown', onKeyDown);
+            cancelButton.remove();
+        }
+
+    }
+
+    function initializeRegionCommentList() {
+        const wrapper = document.querySelector('.wd-image-positions--entity');
+        console.log(wrapper)
+
+        let regionCommentList = document.createElement('div');
+        let label = document.createElement('p');
+        label.innerHTML = "Comments on statements with regions: "
+        regionCommentList.appendChild(label)
+        regionCommentList.setAttribute('id', 'region-comment-list-div')
+        wrapper.append(regionCommentList);
+        
+    }
+
+    function labelLocalQualifierStatement(div) {
+        let child = div.children[0];
+        let oldText = child.text;
+        const statementId = div.getAttribute("data-statement-id");
+
+        if (!statementId.includes("Q")) {
+            child.text = statementId + ": " + oldText;
+        }
+    }
 
     addCommentButtons();
+    initializeRegionCommentList();
     addCommentLabels();
-    // TODO: load comments into here somehow
+    document.querySelectorAll('.wd-image-positions--depicted').forEach(div => {
+        labelLocalQualifierStatement(div);
+    });
+    document.querySelectorAll('.wd-image-positions--entity').forEach(entityElement => {
+        addCommentOnRegionButton(entityElement);
+    });
+
 }
 
-setup()
+setup();
