@@ -28,6 +28,14 @@ source ~/www/python/venv/bin/activate
 pip-sync ~/www/python/src/requirements.txt
 ```
 
+If you make any changes to the local sqlite database (changes to database.py) you may have to rebuild it:
+```
+webservice --backend=kubernetes python3.11 shell
+source ~/www/python/venv/bin/activate
+cd ~/www/python/src
+python3 databasebuilder.py
+```
+
 ## Local development setup
 
 You can also run the tool locally:

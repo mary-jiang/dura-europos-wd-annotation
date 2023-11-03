@@ -91,7 +91,7 @@ def get_all_annotated_objects():
 
 def get_comments():
     """Returns comment associated with an item_id, username, project_lead_username tuple"""
-    return "SELECT statement_id, comment, project_lead_username FROM comments WHERE project_lead_username=? and item_id=? and username=?"
+    return "SELECT statement_id, comment, project_lead_username FROM comments WHERE item_id=? and username=?"
 
 def add_comment():
     """Adds a comment to the comment database"""

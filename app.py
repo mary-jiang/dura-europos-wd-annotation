@@ -661,12 +661,16 @@ def api_add_comment():
 def api_get_comments():
     item_id = flask.request.form.get('item_id')
     username = flask.request.form.get('username')
+    result = queries.query_db(queries.get_comments(), params=[item_id, username])
+    return queries.jsonify_rows(result)
+
+@app.route('/api/v2/get_comments_own_user', methods=["POST"])
+def api_get_comments_own_user():
+    item_id = flask.request.form.get('item_id')
     userinfo = get_userinfo()
     if not userinfo:
         return 'Not logged in', 403
-    project_lead_username = userinfo['name']
-
-    result = queries.query_db(queries.get_comments(), params=[project_lead_username, item_id, username])
+    result = queries.query_db(queries.get_comments(), params=[item_id, userinfo['name']])
     return queries.jsonify_rows(result)
 
 @app.route('/permissions')

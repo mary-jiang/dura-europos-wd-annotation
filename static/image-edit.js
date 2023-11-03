@@ -2,6 +2,7 @@ import { createApp } from 'vue';
 import * as codex from 'codex';
 import * as codexIcons from 'codex-icons';
 import Session, { set } from 'm3api/browser.js';
+import { addCommentLabel, initializeRegionCommentList, labelLocalQualifierStatement } from './shared.js'
 
 function setup() {
     'use strict';
@@ -167,6 +168,32 @@ function setup() {
             });
         }
     }
+
+    function addCommentLabelsOwnUser() {
+        // get base level information
+        const formData = new FormData();
+        const entityDiv = document.querySelector(".wd-image-positions--entity");
+        const itemId = entityDiv.getAttribute('data-entity-id');
+        formData.append('item_id', itemId);
+    
+        // fetch comments
+        return fetch(`${baseUrl}/api/v2/get_comments_own_user`, {
+            method: 'POST',
+            body: formData,
+            credentials: 'include',
+        }).then(response => {
+            if (response.ok) {
+                return response.json().then(json => {
+                    json.forEach(item => addCommentLabel(item.statement_id, item.project_lead_username, item.comment))
+                });
+            } else {
+                return response.text().then(error => {
+                    window.alert(`An error occurred:\n\n${error}`);
+                });
+            }
+        });
+   
+   }
 
     /**
      * Ensure that the image element is suitable for cropper.js,
@@ -675,7 +702,12 @@ function setup() {
 
     addEditButtons();
     addEditRegionButtons();
+    initializeRegionCommentList();
+    document.querySelectorAll('.wd-image-positions--depicted').forEach(div => {
+        labelLocalQualifierStatement(div);
+    });
     addNewDepictedForms();
+    addCommentLabelsOwnUser();
 }
 
 setup();
