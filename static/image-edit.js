@@ -526,20 +526,39 @@ function setup() {
         />
     </div>
     <div class="wd-image-positions--add-new-depicted-form-row">
+        <p>Depicted item: </p>
         <cdx-lookup
             v-model:selected="selectedItem"
             :menu-items="searchResults"
             :menu-config="{'visible-item-limit': searchLimit}"
             :disabled="disabled"
+            aria-label="Value"
             @input="onSearchInput"
             @load-more="onSearchLoadMore"
         />
-        <cdx-button
+        <p>Reference (optional):</p>
+        <select name="referencetype" id="referencetype">
+            <option value="none">Select Reference Type</option>
+            <option value="P854">Reference URL</option>
+            <option value="P248">Stated in (an object on Wikidata)</option>
+        </select>
+        <cdx-lookup
+            v-model:selected="selectedReferenceItem"
+            :menu-items="searchReferenceResults"
+            :menu-config="{'visible-item-limit': searchLimit}"
             :disabled="disabled"
-            @click.prevent="onAddItem"
+            aria-label="Reference"
+            @input="onSearchReferenceInput"
+            @load-more="onSearchReferenceLoadMore"
+        />
+    </div>
+    <div class="wd-image-positions--add-new-depicted-form-row">
+        <cdx-button
+        :disabled="disabled"
+        @click.prevent="onAddItem"
         >
-            <cdx-icon :icon="cdxIconAdd" />
-            Add statement
+        <cdx-icon :icon="cdxIconAdd" />
+        Add statement
         </cdx-button>
     </div>
     <div class="wd-image-positions--add-new-depicted-form-row">
@@ -572,10 +591,14 @@ function setup() {
                     properties,
                     selectedProperty: properties[0].value,
                     selectedItem: null,
+                    selectedReferenceItem: null,
                     searchResults: [],
+                    searchReferenceResults: [],
                     searchValue: '',
+                    searchReferenceValue: '',
                     searchLimit: 5,
                     searchOffset: 0,
+                    searchReferenceOffset: 0,
                     ...codexIcons,
                 };
             },
@@ -595,6 +618,26 @@ function setup() {
                     this.searchOffset += this.searchLimit;
                 },
 
+                async onSearchReferenceInput(value) {
+                    this.searchReferenceValue = value;
+                    this.searchOffset = 0;
+                    if (!value) {
+                        this.searchReferenceResults = [];
+                        return;
+                    }
+                    const dropdown = document.querySelector('#referencetype');
+                    if (dropdown.selectedIndex == 2) {
+                        const newResults = await this.doSearch(value, this.searchResultsOffset);
+                        if (this.searchReferenceValue !== value) {
+                            return; // changed during the request
+                        }
+                        this.searchReferenceResults = newResults;
+                        this.searchReferenceOffset += this.searchLimit;
+                    } else {
+                        this.searchReferenceResults = [];
+                    }
+                },
+
                 async onSearchLoadMore() {
                     const value = this.searchValue;
                     const moreResults = await this.doSearch(value, this.searchOffset);
@@ -603,6 +646,16 @@ function setup() {
                     }
                     this.searchResults.push(...moreResults);
                     this.searchOffset += this.searchLimit;
+                },
+
+                async onSearchReferenceLoadMore() {
+                    const value = this.searchReferenceValue;
+                    const moreResults = await this.doSearch(value, this.searchReferenceOffset);
+                    if (this.searchReferenceValue !== value) {
+                        return; // changed during the request
+                    }
+                    this.searchReferenceResults.push(...moreResults);
+                    this.searchReferenceOffset += this.searchLimit;
                 },
 
                 async doSearch(value, offset) {
@@ -636,6 +689,27 @@ function setup() {
                     formData.append('snaktype', 'value');
                     formData.append('property_id', this.selectedProperty);
                     formData.append('item_id', this.selectedItem);
+
+                    const dropdown = document.querySelector('#referencetype');
+                    if (dropdown.selectedIndex != 0 && (!this.searchReferenceValue || this.searchReferenceValue == '')) { 
+                        // incomplete information
+                        alert('Incomplete reference information. Either change reference type back to "select reference type" or complete information');
+                        return;
+                    } else if (dropdown.selectedIndex != 0) {
+                        if (dropdown.selectedIndex == 2 && !this.selectedReferenceItem) {
+                            alert('No item has been selected. Please select an item that this reference was stated in and try again.');
+                            return;
+                        }
+
+                        formData.append('reference_type', dropdown.value)
+                        if (dropdown.selectedIndex == 1) {
+                            // 1 = reference URL
+                            formData.append('reference_value', this.searchReferenceValue);
+                        } else if (dropdown.selectedIndex == 2) {
+                            // 2 = stated in
+                            formData.append('reference_value', this.selectedReferenceItem);
+                        }
+                    }
                     this.addStatement(formData);
                 },
 

@@ -25,6 +25,9 @@ class Statements(Base):
     snaktype = Column(String)
     username = Column(String) # username of the person making this
 
+    reference_type = Column(String, nullable=True)
+    reference_value = Column(String, nullable=True)
+
 class Qualifiers(Base):
     """This table holds information about the qualifiers (associates statement with the annotated region)"""
     __tablename__ = 'qualifiers'

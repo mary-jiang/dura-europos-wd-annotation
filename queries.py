@@ -54,6 +54,10 @@ def add_statement():
     """Adds a statement into the statements table"""
     return "INSERT INTO statements (item_id, property_id, value_id, snaktype, username) VALUES (?, ?, ?, ?, ?)"
 
+def add_statement_with_reference():
+    """Adds a statement into the statements table that includes references"""
+    return "INSERT INTO statements (item_id, property_id, value_id, snaktype, username, reference_type, reference_value) VALUES (?, ?, ?, ?, ?, ?, ?)"
+
 def delete_statement():
     """Deletes a statement by statement id from the statements table"""
     return "DELETE FROM statements WHERE statement_id=?"

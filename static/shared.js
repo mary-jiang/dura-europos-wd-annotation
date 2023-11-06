@@ -8,7 +8,6 @@ export function addCommentLabel(statementId, projectLeadUsername, comment) {
             parent.appendChild(commentList);
         } else {
             let title = parent.children[0].text
-            console.log(comment)
             let regionParent = document.querySelector(`#region-comment-list-${statementId}`);
             if (!regionParent) {
                 regionParent = document.createElement('ul');
@@ -32,7 +31,6 @@ export function addCommentLabel(statementId, projectLeadUsername, comment) {
 
 export function initializeRegionCommentList() {
     const wrapper = document.querySelector('.wd-image-positions--entity');
-    console.log(wrapper)
 
     let regionCommentList = document.createElement('div');
     let label = document.createElement('p');

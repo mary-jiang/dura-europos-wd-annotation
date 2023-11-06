@@ -526,6 +526,9 @@ def api_add_statement_local(domain):
     item_id = flask.request.form.get('item_id')
     property_id = flask.request.form.get('property_id', 'P180')
     csrf_token = flask.request.form.get('_csrf_token')
+    reference_type = flask.request.form.get("reference_type")
+    reference_value = flask.request.form.get("reference_value")
+    
     if not entity_id or not snaktype or not csrf_token:
         return 'Incomplete form data', 400
     if (snaktype == 'value') != (item_id is not None):
@@ -567,7 +570,11 @@ def api_add_statement_local(domain):
 
     # save this statement locally
     username = get_userinfo()['name']
-    queries.query_db(queries.add_statement(), params=[entity_id, property_id, item_id, snaktype, username])
+    if reference_type and reference_value:
+        print(reference_type, reference_value)
+        queries.query_db(queries.add_statement_with_reference(), params=[entity_id, property_id, item_id, snaktype, username, reference_type, reference_value])
+    else:
+        queries.query_db(queries.add_statement(), params=[entity_id, property_id, item_id, snaktype, username])
 
     # update response with the statement id that was added
     result = queries.query_db(queries.get_latest_statement())
