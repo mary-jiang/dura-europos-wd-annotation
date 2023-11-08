@@ -98,6 +98,7 @@ function setup() {
         button.addEventListener('click', addCommentRegionListeners);
         const buttonWrapper = document.createElement('div');
         buttonWrapper.append(button);
+        addUploadButton(buttonWrapper);
         entityElement.append(buttonWrapper);
 
         let onKeyDown = null;
@@ -197,6 +198,44 @@ function setup() {
             cancelButton.remove();
         }
 
+    }
+
+    function addUploadButton(element) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.classList.add('btn', 'btn-secondary');
+        button.textContent = 'Approve and upload annotations';
+        button.addEventListener('click', onClick);
+        element.append(button);
+
+        const formData = new FormData();
+        const entityDiv = document.querySelector(".wd-image-positions--entity");
+        const itemId = entityDiv.getAttribute('data-entity-id'),
+              username = window.location.href.substring(window.location.href.lastIndexOf("/") + 1);
+        formData.append('item_id', itemId);
+        formData.append('username', username)
+
+        function onClick() {
+            return fetch(`${baseUrl}/api/v2/upload_annotations`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'include',
+            }).then(response => {
+                if (response.ok) {
+                    document.querySelectorAll(".wd-image-positions--depicteds-without-region__P180").forEach(e => e.remove());
+                    document.querySelectorAll(".wd-image-positions--depicted__P180").forEach(e => e.remove());
+                    alert("Uploaded to Wikidata!");
+                    return;
+                } else {
+                    return response.text().then(error => {
+                        window.alert(`An error occurred:\n\n${error}`);
+                    });
+                }
+            });
+
+           
+        }
+       
     }
 
     addCommentButtons();

@@ -94,9 +94,13 @@ def get_all_annotated_objects():
     return "SELECT statement_id, item_id, username from statements"
 
 def get_comments():
-    """Returns comment associated with an item_id, username, project_lead_username tuple"""
+    """Returns comment associated with an item_id, username tuple"""
     return "SELECT statement_id, comment, project_lead_username FROM comments WHERE item_id=? and username=?"
 
 def add_comment():
     """Adds a comment to the comment database"""
     return "INSERT INTO comments (statement_id, comment, project_lead_username, item_id, username) VALUES (?, ?, ?, ?, ?)"
+
+def delete_all_comments():
+    """Deletes all comments with a certain item_id, username pair"""
+    return "DELETE FROM comments WHERE item_id=? and username=?"

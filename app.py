@@ -680,6 +680,19 @@ def api_get_comments_own_user():
     result = queries.query_db(queries.get_comments(), params=[item_id, userinfo['name']])
     return queries.jsonify_rows(result)
 
+@app.route('/api/v2/upload_annotations', methods=["POST"])
+def api_upload_annotation():
+    item_id = flask.request.form.get('item_id')
+    username = flask.request.form.get('username')
+
+    result = upload_local_annotations(item_id, username)
+    if result[1] == 200:
+        # delete related things from the local stuff
+        delete_local_annotations(item_id, username)
+        delete_all_comments(item_id, username)
+
+    return result 
+
 @app.route('/permissions')
 def permissions():
     userinfo = get_userinfo()
@@ -1399,6 +1412,106 @@ def deny_access():
         if output['is_project_lead'] == 0:
             return True
     return False
+
+def upload_local_annotations(item_id, username):
+    """Uploads all local statements/qualifiers to Wikidata for a given item_id/username pair"""
+    result = queries.query_db(queries.get_object_statements(), params=[item_id, username])
+    all_statements = queries.jsonify_rows(result)
+
+    # set up wikidata api session
+    session = authenticated_session("www.wikidata.org")
+    if session is None:
+        return 'Not logged in', 403
+
+    token = session.get(action='query', meta='tokens', type='csrf')['query']['tokens']['csrftoken']
+
+    for statement in all_statements:
+        value = json.dumps({'entity-type': 'item', 'id': statement['value_id']})
+        try:
+            response = session.post(action='wbcreateclaim',
+                                    entity=statement['item_id'],
+                                    snaktype=statement['snaktype'],
+                                    property='P180',
+                                    value=value,
+                                    token=token)
+        except mwapi.errors.APIError as error:
+            return str(error), 500
+
+        # check to see if the local statement has a qualifier and update if it does
+        wikidata_statement_id = response['claim']['id']
+        local_qualifier = queries.query_db(queries.get_qualifier_for_statement(), params=[statement['statement_id']])
+        if local_qualifier:     
+            jsonified_qualifier = queries.jsonify_rows(local_qualifier)[0]
+            try:
+                response = session.post(action='wbsetqualifier',
+                                    claim=wikidata_statement_id,
+                                    property='P2677',
+                                    snaktype='value',
+                                    value=('"' + jsonified_qualifier['iiif_region'] + '"'),
+                                    **({'snakhash': jsonified_qualifier['qualifier_hash']} if jsonified_qualifier['qualifier_hash'] else {}),
+                                    summary='region drawn manually using Dura Europos Wikidata Annotation Tool',
+                                    token=token)
+            except mwapi.errors.APIError as error:
+                if error.code == 'no-such-qualifier':
+                    return 'This region does not exist (anymore) – it may have been edited in the meantime. Please try reloading the page.', 500
+                return str(error), 500
+        
+        # upload reference if needed
+        if statement['reference_type'] and statement['reference_value']:
+            # reference to be posted
+            if statement['reference_type'] == 'P248':
+                # stated in (reference to wikidata object)
+                datavalue = {
+                    'value': {
+                        'entity-type':'item',
+                        'id': statement['reference_value']
+                    },
+                    'type': 'wikibase-entityid'
+                }
+            else:
+                # reference url
+                datavalue = {
+                    'value': statement['reference_value'],
+                    'type': 'string',
+                }
+
+            snak_value = [{
+                'snaktype': 'value',
+                'property': statement['reference_type'],
+                'datavalue': datavalue,
+            }]
+
+            if statement['reference_type'] == 'P248':
+                snak_value[0]['datatype'] = 'wikibase-item'
+
+            snak = {
+                statement['reference_type']: snak_value
+            }
+
+            snak = json.dumps(snak)
+            try:
+                response = session.post(action='wbsetreference',
+                                        statement=wikidata_statement_id,
+                                        snaks=snak,
+                                        token=token)
+            except mwapi.errors.APIError as error:
+                return str(error), 500
+    return 'Success', 200
+
+def delete_local_annotations(item_id, username):
+    """Deletes all local statements/qualifiers for a given item_id/username pair"""
+    # fetch all of the statements that need to be deleted
+    result = queries.query_db(queries.get_object_statements(), params=[item_id, username])
+    all_statements = queries.jsonify_rows(result)
+    for statement in all_statements:
+        # delete from the statements table
+        queries.query_db(queries.delete_statement(), params=[statement['statement_id']])
+        # delete from the qualifiers table -> if this statement doesn't have a qualifier then this will just do nothing
+        queries.query_db(queries.delete_qualifier(), params=[statement['statement_id']])
+
+def delete_all_comments(item_id, username):
+    """Deletes all comments associated with a give item_id/username pair"""
+    queries.query_db(queries.delete_all_comments(), params=[item_id, username])
 
 @app.after_request
 def denyFrame(response):
