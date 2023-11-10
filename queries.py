@@ -104,3 +104,15 @@ def add_comment():
 def delete_all_comments():
     """Deletes all comments with a certain item_id, username pair"""
     return "DELETE FROM comments WHERE item_id=? and username=?"
+
+def add_approval():
+    """Adds an approval into the approval table"""
+    return "INSERT INTO approvals (username, item_id, approved) VALUES (?, ?, ?)"
+
+def get_approval():
+    """Returns approval based on item id and username"""
+    return "SELECT approved FROM approvals WHERE username=? and item_id=?"
+
+def delete_approval():
+    """Deletes approval row based on item id and username"""
+    return "DELETE from approvals WHERE username=? and item_id=?"

@@ -88,10 +88,8 @@ function setup() {
                       .map(klass => klass.slice('wd-image-positions--depicteds-without-region__'.length))[0];
                 depicted.dataset.statementId = element.dataset.statementId;
                 if (depicted.dataset.statementId.includes("Q")) {
-                    console.log("HERE")
                     depicted.classList.add(`wd-image-positions--depicted__${propertyId}`)
                 } else {
-                    console.log("HERE 2")
                     depicted.classList.add(`wd-image-positions--depicted__local`)
                 }
                 if (depictedId !== undefined) {
@@ -501,6 +499,59 @@ function setup() {
         }
     }
 
+    function addUploadButton(element) {
+        const formData = new FormData();
+        const entityDiv = document.querySelector(".wd-image-positions--entity");
+        const itemId = entityDiv.getAttribute('data-entity-id');
+        formData.append('item_id', itemId);
+
+        fetch(`${baseUrl}/api/v2/get_approved`, {
+            method: 'POST',
+            body: formData,
+            credentials: 'include',
+        }).then(response => {
+            if (response.ok) {
+                response.json().then(json => {
+                    if (json[0]['approved'] == 0) {
+                        return;
+                    }
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.classList.add('btn', 'btn-secondary');
+                    button.setAttribute('id', "approve-button")
+                    button.textContent = 'Upload to Wikidata';
+                    button.addEventListener('click', onClick);
+                    element.prepend(button);
+                });
+              
+            } else {
+                return response.text().then(error => {
+                    window.alert(`An error occurred:\n\n${error}`);
+                });
+            }
+        });
+
+        function onClick() {
+            return fetch(`${baseUrl}/api/v2/upload_annotations`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'include',
+            }).then(response => {
+                if (response.ok) {
+                    document.querySelectorAll(".wd-image-positions--depicteds-without-region__P180").forEach(e => e.remove());
+                    document.querySelector('#approve-button').remove();
+                    document.querySelectorAll(".wd-image-positions--depicted__P180").forEach(e => e.remove());
+                    alert("Uploaded to Wikidata!");
+                    return;
+                } else {
+                    return response.text().then(error => {
+                        window.alert(`An error occurred:\n\n${error}`);
+                    });
+                }
+            });
+        }
+    }
+
     function addNewDepictedForm(entityElement) {
         const session = new Session( 'www.wikidata.org', {
             formatversion: 2,
@@ -782,6 +833,9 @@ function setup() {
     });
     addNewDepictedForms();
     addCommentLabelsOwnUser();
+
+    // todo: append button in the beginning of this new-depicted-form-root
+    addUploadButton(document.querySelector('#new-depicted-form-root'));
 }
 
 setup();

@@ -98,7 +98,7 @@ function setup() {
         button.addEventListener('click', addCommentRegionListeners);
         const buttonWrapper = document.createElement('div');
         buttonWrapper.append(button);
-        addUploadButton(buttonWrapper);
+        addApproveButton(buttonWrapper);
         entityElement.append(buttonWrapper);
 
         let onKeyDown = null;
@@ -200,14 +200,7 @@ function setup() {
 
     }
 
-    function addUploadButton(element) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.classList.add('btn', 'btn-secondary');
-        button.textContent = 'Approve and upload annotations';
-        button.addEventListener('click', onClick);
-        element.append(button);
-
+    function addApproveButton(element) {
         const formData = new FormData();
         const entityDiv = document.querySelector(".wd-image-positions--entity");
         const itemId = entityDiv.getAttribute('data-entity-id'),
@@ -215,16 +208,44 @@ function setup() {
         formData.append('item_id', itemId);
         formData.append('username', username)
 
+        fetch(`${baseUrl}/api/v2/get_approved`, {
+            method: 'POST',
+            body: formData,
+            credentials: 'include',
+        }).then(response => {
+            if (response.ok) {
+                response.json().then(json => {
+                    if (json[0]['approved'] == 1) {
+                        const label = document.createElement("p");
+                        label.innerHTML = "Already approved!"
+                        element.append(label)
+                        return;
+                    }
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.classList.add('btn', 'btn-secondary');
+                    button.setAttribute('id', "approve-button")
+                    button.textContent = 'Approve and notify user';
+                    button.addEventListener('click', onClick);
+                    element.append(button);
+                });
+              
+            } else {
+                return response.text().then(error => {
+                    window.alert(`An error occurred:\n\n${error}`);
+                });
+            }
+        });
+
         function onClick() {
-            return fetch(`${baseUrl}/api/v2/upload_annotations`, {
+            return fetch(`${baseUrl}/api/v2/emailuser`, {
                 method: 'POST',
                 body: formData,
                 credentials: 'include',
             }).then(response => {
                 if (response.ok) {
-                    document.querySelectorAll(".wd-image-positions--depicteds-without-region__P180").forEach(e => e.remove());
-                    document.querySelectorAll(".wd-image-positions--depicted__P180").forEach(e => e.remove());
-                    alert("Uploaded to Wikidata!");
+                    alert("Notified user!")
+                    document.querySelector('#approve-button').remove();
                     return;
                 } else {
                     return response.text().then(error => {

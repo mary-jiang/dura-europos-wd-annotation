@@ -683,13 +683,17 @@ def api_get_comments_own_user():
 @app.route('/api/v2/upload_annotations', methods=["POST"])
 def api_upload_annotation():
     item_id = flask.request.form.get('item_id')
-    username = flask.request.form.get('username')
+    # username = flask.request.form.get('username')
+    userinfo = get_userinfo()
+    if not userinfo:
+        return 'Not logged in', 403
+    username = userinfo['name']
 
     result = upload_local_annotations(item_id, username)
     if result[1] == 200:
         # delete related things from the local stuff
         delete_local_annotations(item_id, username)
-        delete_all_comments(item_id, username)
+        delete_all_comments_and_approval(item_id, username)
 
     return result 
 
@@ -741,6 +745,48 @@ def comment(item_id, username):
 
     item = load_item_and_property(item_id=item_id, property_id=default_property, include_depicteds=True, local_only=True, username=username)
     return flask.render_template('comment.html', **item)
+
+@app.route('/api/v2/emailuser', methods=["POST"])
+def api_email_user():
+    username = flask.request.form.get('username')
+    item_id = flask.request.form.get('item_id')
+    subject = f"Annotations for object {item_id} approved"
+    link = "https://dura-europos-wd-annotation.toolforge.org" + str(flask.url_for('item', item_id=item_id))
+    text = f"Your annotations for object {item_id} have been approved on the Dura Europos Wikidata Annotation Tool. Please navigate to {link} or type in {item_id} into the lookup bar when you visit the homepage at https://dura-europos-wd-annotation.toolforge.org/"
+
+    session = authenticated_session("www.wikidata.org")
+    if session is None:
+        return 'Not logged in', 403
+    token = session.get(action='query', meta='tokens', type='csrf')['query']['tokens']['csrftoken']
+    try: 
+        response = session.post(action="emailuser",
+                                target=username,
+                                subject=subject,
+                                text=text,
+                                token=token)
+    except mwapi.errors.APIError as error:
+        return str(error), 500
+    
+    # update the database
+    queries.query_db(queries.add_approval(), params=[username, item_id, True])
+
+    return "Success", 200    
+
+@app.route('/api/v2/get_approved', methods=["POST"])
+def api_get_approved():
+    username = flask.request.form.get('username')
+    item_id = flask.request.form.get('item_id')
+
+    if not username:
+        userinfo = get_userinfo()
+        username = userinfo['name']
+
+    result = queries.query_db(queries.get_approval(), params=[username, item_id])
+    if result:
+        result = queries.jsonify_rows(result)
+    else:
+        result = [{'approved': 0}]
+    return flask.jsonify(result)
 
 # https://iiif.io/api/image/2.0/#region
 @app.template_filter()
@@ -1509,9 +1555,10 @@ def delete_local_annotations(item_id, username):
         # delete from the qualifiers table -> if this statement doesn't have a qualifier then this will just do nothing
         queries.query_db(queries.delete_qualifier(), params=[statement['statement_id']])
 
-def delete_all_comments(item_id, username):
-    """Deletes all comments associated with a give item_id/username pair"""
+def delete_all_comments_and_approval(item_id, username):
+    """Deletes all comments and approvals associated with a give item_id/username pair"""
     queries.query_db(queries.delete_all_comments(), params=[item_id, username])
+    queries.query_db(queries.delete_approval(), params=[username, item_id])
 
 @app.after_request
 def denyFrame(response):

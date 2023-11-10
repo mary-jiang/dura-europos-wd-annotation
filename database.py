@@ -46,3 +46,12 @@ class Comments(Base):
     project_lead_username = Column(String)
     item_id = Column(String)
     username = Column(String)
+
+class Approvals(Base):
+    """This table holds information about what item_id and username pairs are approved"""
+    __tablename__ = 'approvals'
+
+    approval_id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String)
+    item_id = Column(String)
+    approved = Column(Boolean)
