@@ -603,6 +603,8 @@ function setup() {
             @load-more="onSearchReferenceLoadMore"
         />
     </div>
+    <div class="wd-image-positions--add-new-depicted-form-row" id="reference-row">
+    </div>
     <div class="wd-image-positions--add-new-depicted-form-row">
         <cdx-button
         :disabled="disabled"
@@ -677,7 +679,8 @@ function setup() {
                         return;
                     }
                     const dropdown = document.querySelector('#referencetype');
-                    if (dropdown.selectedIndex == 2) {
+                    const toggle = document.querySelector('#qid-toggle');
+                    if (dropdown.selectedIndex == 2 && toggle.checked == false) {
                         const newResults = await this.doSearch(value, this.searchResultsOffset);
                         if (this.searchReferenceValue !== value) {
                             return; // changed during the request
@@ -742,14 +745,34 @@ function setup() {
                     formData.append('item_id', this.selectedItem);
 
                     const dropdown = document.querySelector('#referencetype');
+                    const toggle = document.querySelector('#qid-toggle');
                     if (dropdown.selectedIndex != 0 && (!this.searchReferenceValue || this.searchReferenceValue == '')) { 
                         // incomplete information
                         alert('Incomplete reference information. Either change reference type back to "select reference type" or complete information');
                         return;
                     } else if (dropdown.selectedIndex != 0) {
-                        if (dropdown.selectedIndex == 2 && !this.selectedReferenceItem) {
+                        if (dropdown.selectedIndex == 2 && !this.selectedReferenceItem && toggle.checked == false) {
                             alert('No item has been selected. Please select an item that this reference was stated in and try again.');
                             return;
+                        }
+
+                        if (dropdown.selectedIndex == 2 && toggle.checked == true) {
+                            if (!this.searchReferenceValue) {
+                                alert('Incomplete reference information. Either change reference type back to "select reference type" or complete information');
+                                return;
+                            }
+                            // make sure that a given QID is valid
+                            if (this.searchReferenceValue[0] != "Q") {
+                                alert("Given reference is not a valid QID. Please check and try again.");
+                                return;
+                            }
+                            try {
+                                let digits = BigInt(this.searchReferenceValue.substring(1));
+                                console.log(digits);               
+                            } catch (error) {
+                                alert("Given reference is not a valid QID. Please check and try again.");
+                                return;
+                            }
                         }
 
                         formData.append('reference_type', dropdown.value)
@@ -757,8 +780,12 @@ function setup() {
                             // 1 = reference URL
                             formData.append('reference_value', this.searchReferenceValue);
                         } else if (dropdown.selectedIndex == 2) {
-                            // 2 = stated in
-                            formData.append('reference_value', this.selectedReferenceItem);
+                            // 2 = stated in                          
+                            if (toggle.checked) {
+                                formData.append('reference_value', this.searchReferenceValue);
+                            } else {
+                                formData.append('reference_value', this.selectedReferenceItem);
+                            }
                         }
                     }
                     this.addStatement(formData);
@@ -825,6 +852,40 @@ function setup() {
         });
     }
 
+    function addDropDownEventListener() {
+        function onDropDownChange() {
+            const element = document.getElementById('referencetype');
+            if (element) {
+                if (element.value == "P248") {
+                    let toggleWrapper = document.createElement('label');
+                    toggleWrapper.classList.add('switch');
+                    toggleWrapper.setAttribute('id', 'toggle-wrapper');
+                    let toggleExplainer = document.createElement('p');
+                    toggleExplainer.innerHTML = "Toggle to cite known QID";
+                    let toggleInput = document.createElement('input');
+                    toggleInput.setAttribute('type', 'checkbox');
+                    toggleInput.setAttribute('id', 'qid-toggle');
+                    let toggleSpan = document.createElement('span');
+                    toggleSpan.classList.add('slider');
+                    toggleSpan.classList.add('round');
+
+                    toggleWrapper.appendChild(toggleInput);
+                    toggleWrapper.appendChild(toggleSpan);
+                    
+                    document.getElementById('reference-row').append(toggleExplainer);
+                    document.getElementById('reference-row').append(toggleWrapper);
+
+                } else {
+                    document.getElementById('reference-row').innerHTML = '';
+                }
+            }
+        }
+
+        const element = document.getElementById('referencetype');
+        element.addEventListener('change', onDropDownChange);
+
+    }
+
     addEditButtons();
     addEditRegionButtons();
     initializeRegionCommentList();
@@ -834,7 +895,8 @@ function setup() {
     addNewDepictedForms();
     addCommentLabelsOwnUser();
 
-    // todo: append button in the beginning of this new-depicted-form-root
+    addDropDownEventListener();
+
     addUploadButton(document.querySelector('#new-depicted-form-root'));
 }
 
