@@ -58,6 +58,10 @@ def add_statement_with_reference():
     """Adds a statement into the statements table that includes references"""
     return "INSERT INTO statements (item_id, property_id, value_id, snaktype, username, reference_type, reference_value) VALUES (?, ?, ?, ?, ?, ?, ?)"
 
+def add_statement_with_reference_and_page():
+    """Adds a atstaement into the statements table that includes references and page number"""
+    return "INSERT INTO statements (item_id, property_id, value_id, snaktype, username, reference_type, reference_value, pages_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+
 def delete_statement():
     """Deletes a statement by statement id from the statements table"""
     return "DELETE FROM statements WHERE statement_id=?"
@@ -104,6 +108,10 @@ def add_comment():
 def delete_all_comments():
     """Deletes all comments with a certain item_id, username pair"""
     return "DELETE FROM comments WHERE item_id=? and username=?"
+
+def delete_comment_with_statement_id():
+    """Deletes all comments that are associated with a specific statement id"""
+    return "DELETE FROM comments WHERE statement_id=?"
 
 def add_approval():
     """Adds an approval into the approval table"""

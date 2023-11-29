@@ -786,6 +786,11 @@ function setup() {
                             } else {
                                 formData.append('reference_value', this.selectedReferenceItem);
                             }
+
+                            const pages = document.querySelector("#pages-input");
+                            if (pages.value != "") {
+                                formData.append('pages_value', pages.value);
+                            }
                         }
                     }
                     this.addStatement(formData);
@@ -857,6 +862,7 @@ function setup() {
             const element = document.getElementById('referencetype');
             if (element) {
                 if (element.value == "P248") {
+                    // append the QID toggle
                     let toggleWrapper = document.createElement('label');
                     toggleWrapper.classList.add('switch');
                     toggleWrapper.setAttribute('id', 'toggle-wrapper');
@@ -874,6 +880,15 @@ function setup() {
                     
                     document.getElementById('reference-row').append(toggleExplainer);
                     document.getElementById('reference-row').append(toggleWrapper);
+
+                    let pagesLabel = document.createElement('p');
+                    pagesLabel.innerHTML = "Pages (optional)";
+                    let pagesInput = document.createElement('input');
+                    pagesInput.setAttribute('id', 'pages-input');
+                    pagesInput.setAttribute('placeholder', '12-13');
+
+                    document.getElementById('reference-row').append(pagesLabel);
+                    document.getElementById('reference-row').append(pagesInput);
 
                 } else {
                     document.getElementById('reference-row').innerHTML = '';

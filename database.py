@@ -28,6 +28,8 @@ class Statements(Base):
     reference_type = Column(String, nullable=True)
     reference_value = Column(String, nullable=True)
 
+    pages_value = Column(String, nullable=True)
+
 class Qualifiers(Base):
     """This table holds information about the qualifiers (associates statement with the annotated region)"""
     __tablename__ = 'qualifiers'

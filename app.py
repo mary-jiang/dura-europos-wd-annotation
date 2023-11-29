@@ -528,6 +528,7 @@ def api_add_statement_local(domain):
     csrf_token = flask.request.form.get('_csrf_token')
     reference_type = flask.request.form.get("reference_type")
     reference_value = flask.request.form.get("reference_value")
+    pages_value = flask.request.form.get("pages_value")
     
     if not entity_id or not snaktype or not csrf_token:
         return 'Incomplete form data', 400
@@ -571,7 +572,10 @@ def api_add_statement_local(domain):
     # save this statement locally
     username = get_userinfo()['name']
     if reference_type and reference_value:
-        queries.query_db(queries.add_statement_with_reference(), params=[entity_id, property_id, item_id, snaktype, username, reference_type, reference_value])
+        if pages_value:
+            queries.query_db(queries.add_statement_with_reference_and_page(), params=[entity_id, property_id, item_id, snaktype, username, reference_type, reference_value, pages_value])
+        else:
+            queries.query_db(queries.add_statement_with_reference(), params=[entity_id, property_id, item_id, snaktype, username, reference_type, reference_value])
     else:
         queries.query_db(queries.add_statement(), params=[entity_id, property_id, item_id, snaktype, username])
 
@@ -615,6 +619,7 @@ def api_delete_statement_local():
         return 'Incomplete form data', 400
     
     queries.query_db(queries.delete_statement(), params=[statement_id])
+    queries.query_db(queries.delete_comment_with_statement_id(), params=[statement_id])
     
     return flask.jsonify({'success': True})
 
@@ -1533,9 +1538,35 @@ def upload_local_annotations(item_id, username):
                 statement['reference_type']: snak_value
             }
 
-            snak = json.dumps(snak)
             try:
-                response = session.post(action='wbsetreference',
+                if statement['pages_value']:
+                    page_datavalue = {
+                        'value': statement['pages_value'],
+                        'type': 'string'
+                    }
+                    page_snak_value = [{
+                        'snaktype': 'value',
+                        'property': 'P304',
+                        'datavalue': page_datavalue,
+                        'datatype': 'string' 
+                    }]
+
+                    snak['P304'] = page_snak_value
+                    snak = json.dumps(snak)
+                    snaks_order = ['P248', 'P304'] # if have page value guarenteed to be stated in
+                    snaks_order = json.dumps(snaks_order)
+                    
+                    # have to mangle this in order to set snaks-order which has a hyphen
+                    response = session.post(**{
+                        'action': 'wbsetreference',
+                        'statement': wikidata_statement_id,
+                        'snaks': snak,
+                        'snaks-order': snaks_order,
+                        'token': token
+                    })
+                else:
+                    snak = json.dumps(snak)
+                    response = session.post(action='wbsetreference',
                                         statement=wikidata_statement_id,
                                         snaks=snak,
                                         token=token)
