@@ -12,19 +12,13 @@
 
 <h2 class="mt-4"><a href="{{url_for('dashboard', page=1)}}">Browse Dashboard</a></h2>
 
-<h2 class="mt-4">Lookup by item and property</h2>
+<h2 class="mt-4">Lookup by item id</h2>
 <form method="post">
   <div class="mb-3">
     <label for="item_id" class="form-label">Item ID</label>
     <input type="text" id="item_id" name="item_id" class="form-control" required placeholder="Q1231009 or https://www.wikidata/org/wiki/Q1231009 or similar">
   </div>
-  <div class="mb-3">
-    <label for="item_property_id" class="form-label">Property ID <small>(optional)</small></label>
-    <input type="text" id="item_property_id" name="property_id" class="form-control" placeholder="P18" pattern="P[1-9][0-9]*">
-  </div>
   <button type="submit" class="btn btn-primary">Load</button>
-  <button type="submit" name="preview" class="btn btn-secondary">Preview IIIF</button>
-  <button type="submit" name="manifest" class="btn btn-secondary">IIIF Manifest</button>
 </form>
 
 {% endblock %}
