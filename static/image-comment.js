@@ -97,6 +97,7 @@ function setup() {
         button.textContent = 'Comment on a region';
         button.addEventListener('click', addCommentRegionListeners);
         const buttonWrapper = document.createElement('div');
+        buttonWrapper.setAttribute('id', 'approve-and-comment-buttons')
         buttonWrapper.append(button);
         addApproveButton(buttonWrapper);
         entityElement.append(buttonWrapper);
@@ -138,7 +139,7 @@ function setup() {
             formData.append('item_id', itemId);
             formData.append('username', username);
 
-            const statementsList = document.querySelector(".wd-image-positions--depicteds-without-region")
+            let statementsList = document.querySelector(".wd-image-positions--depicteds-without-region")
 
             const label = document.createElement('h4');
             label.innerHTML = `Commenting on region with label: ${title}`;
@@ -178,6 +179,11 @@ function setup() {
                         });
                     }
                 });
+            }
+
+
+            if (statementsList == null) {
+                statementsList = document.querySelector('#approve-and-comment-buttons');
             }
 
             statementsList.prepend(brk)
