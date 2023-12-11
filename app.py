@@ -18,6 +18,7 @@ import string
 import toolforge
 import urllib.parse
 import yaml
+import math
 
 from exceptions import WrongDataValueType
 import messages
@@ -484,8 +485,12 @@ def dashboard(page):
 
     return flask.render_template('dashboard.html', entries=processed_entries)
 
-@app.route('/projectleaddashboard')
-def project_lead_dashboard():
+@app.route('/projectleaddashboard/<page>')
+def project_lead_dashboard(page): 
+    total_items = queries.query_db(queries.get_number_of_objects_annotated())
+    total_items = queries.jsonify_rows(total_items)[0]['COUNT(DISTINCT item_id)']
+    pages = math.ceil(total_items / 10)
+
     if deny_access():
         return flask.render_template('no-access.html')
     # fetch all objects thathave been annotated
@@ -499,6 +504,14 @@ def project_lead_dashboard():
             objects[item_id] = set()
         objects[item_id].add(row['username'])
 
+    end_index = int(page) * 10
+    start_index = end_index - 10 if end_index > 10 else 0
+
+    keys = list(objects.keys())[start_index:end_index]
+    trimmed_objects = {}
+    for key in keys:
+        trimmed_objects[key] = objects[key]
+
     # need to get the images and stuff of each object
     objects_info = {}
     language_codes = request_language_codes()
@@ -506,17 +519,16 @@ def project_lead_dashboard():
     session = anonymous_session('www.wikidata.org')
     api_response = session.get(action='wbgetentities',
                                props=props,
-                               ids=list(objects.keys()),
+                               ids=keys,
                                languages=language_codes)
-    for key in objects.keys():
+    for key in keys:
         entry = {
             'item_id': key
         }
         image_datavalue = best_value(api_response['entities'][key], default_property)
         entry.update(load_image(image_datavalue['value'], language_codes))
         objects_info[key] = entry
-
-    return flask.render_template('project-lead-dashboard.html', objects=objects, objects_info=objects_info)
+    return flask.render_template('project-lead-dashboard.html', objects=trimmed_objects, objects_info=objects_info, pages=pages)
 
 @app.route('/api/v1/add_statement_local/<domain>', methods=['POST'])
 def api_add_statement_local(domain):

@@ -2,8 +2,16 @@
 
 {% block main %}
 <link rel="stylesheet" type="text/css" href="../static/dashboard.css" />
+{% set curPage = url_for(request.endpoint, **request.view_args).replace("/projectleaddashboard/", "") | int %}
+{% for i in range(1, pages + 1)%}
+{%if i == curPage%}
+        <a href="{{url_for('project_lead_dashboard', page=i)}}" style="color:purple">{{i}}</a>
+    {%else%}
+        <a href="{{url_for('project_lead_dashboard', page=i)}}">{{i}}</a>
+    {%endif%}
+{% endfor %}
 <div class="flex-grid">
-{% for key in objects.keys() %}
+{% for key in objects %}
     <div class="col">
         <img src="{{objects_info[key]['image_url']}}">
         <p>{{key}}</p>

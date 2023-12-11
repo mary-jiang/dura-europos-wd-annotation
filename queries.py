@@ -124,3 +124,7 @@ def get_approval():
 def delete_approval():
     """Deletes approval row based on item id and username"""
     return "DELETE from approvals WHERE username=? and item_id=?"
+
+def get_number_of_objects_annotated():
+    """Returns the number of total objects that have annotations"""
+    return "SELECT COUNT(DISTINCT item_id) FROM statements"
