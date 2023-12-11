@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block main %}
+<h1>My Annotations</h1>
+<link rel="stylesheet" type="text/css" href="../static/dashboard.css" />
+{% set curPage = url_for(request.endpoint, **request.view_args).replace("/annotations/", "") | int %}
+{% for i in range(1, pages + 1)%}
+    {%if i == curPage %}
+        <a href="{{url_for('annotations', page=i)}}" style="color:purple">{{i}}</a>
+    {% else %}
+        <a href="{{url_for('annotations', page=i)}}">{{i}}</a>
+    {% endif %}
+{% endfor %}
+<div class="flex-grid">
+{% for object in objects %}
+    <div class="col">
+        <a href="{{url_for('item', item_id=object['item_id'])}}">
+        <img src="{{object['image_url']}}">
+        <p>{{object['image_title']}}</p>
+        </a>
+        {% if object['approved'] %}
+            <p>Approved!</p>
+        {% else %}
+            <p>Not approved yet</p>
+        {% endif %}
+    </div>
+{% endfor %}
+</div>
+{% endblock %}

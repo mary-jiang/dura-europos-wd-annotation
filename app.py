@@ -487,12 +487,13 @@ def dashboard(page):
 
 @app.route('/projectleaddashboard/<page>')
 def project_lead_dashboard(page): 
+    if deny_access():
+        return flask.render_template('no-access.html')
+    
     total_items = queries.query_db(queries.get_number_of_objects_annotated())
     total_items = queries.jsonify_rows(total_items)[0]['COUNT(DISTINCT item_id)']
     pages = math.ceil(total_items / 10)
 
-    if deny_access():
-        return flask.render_template('no-access.html')
     # fetch all objects thathave been annotated
     result = queries.query_db(queries.get_all_annotated_objects())
     output = queries.jsonify_rows(result)
@@ -529,6 +530,53 @@ def project_lead_dashboard(page):
         entry.update(load_image(image_datavalue['value'], language_codes))
         objects_info[key] = entry
     return flask.render_template('project-lead-dashboard.html', objects=trimmed_objects, objects_info=objects_info, pages=pages)
+
+@app.route('/annotations/<page>')
+def annotations(page):
+    # this is a page of a user's local annotations in dashboard format
+    userinfo = get_userinfo()
+    if not userinfo:
+        return flask.render_template('not-logged-in.html')
+
+    username = userinfo['name']
+    total_items = queries.query_db(queries.get_number_of_objects_annotated_by_user(), params=[username])
+    total_items = queries.jsonify_rows(total_items)[0]['COUNT(DISTINCT item_id)']
+    pages = math.ceil(total_items / 10)
+
+    # get all the objects that have been annotated by this user
+    result = queries.query_db(queries.get_all_annotated_objects_by_user(), params=[username])
+    output = queries.jsonify_rows(result)
+    keys = [x['item_id'] for x in output]
+
+    end_index = int(page) * 10
+    start_index = end_index - 10 if end_index > 10 else 0
+
+    keys = keys[start_index:end_index]
+
+    # get actual object information for key list
+    language_codes = request_language_codes()
+    props = ['claims']
+    session = anonymous_session('www.wikidata.org')
+    api_response = session.get(action='wbgetentities',
+                               props=props,
+                               ids=keys,
+                               languages=language_codes)
+    objects = []
+    for key in keys:
+        processed_entry = {
+            'item_id': key
+        }
+        image_datavalue = best_value(api_response['entities'][key], default_property)
+        processed_entry.update(load_image(image_datavalue['value'], language_codes))
+
+        # check if this thing has been approved or not
+        approved_query = queries.jsonify_rows(queries.query_db(queries.get_approval(), params=[username, key]))
+        approved = True if approved_query and approved_query[0]['approved'] == 1 else False
+        processed_entry['approved'] = approved
+        
+        objects.append(processed_entry)
+
+    return flask.render_template('annotations.html', pages=pages, objects=objects)
 
 @app.route('/api/v1/add_statement_local/<domain>', methods=['POST'])
 def api_add_statement_local(domain):
@@ -735,6 +783,9 @@ def permissions():
             if output['requested_lead_status'] == 1:
                 already_requested = True
         is_logged_in = True
+
+    if not is_logged_in:
+        return flask.render_template('not-logged-in.html')
 
     return flask.render_template('permissions.html', is_logged_in=is_logged_in, is_project_lead=is_project_lead, users=users, already_requested=already_requested)
 

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block main %}
+<h1>Review Annotations</h1>
 <link rel="stylesheet" type="text/css" href="../static/dashboard.css" />
 {% set curPage = url_for(request.endpoint, **request.view_args).replace("/projectleaddashboard/", "") | int %}
 {% for i in range(1, pages + 1)%}

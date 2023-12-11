@@ -97,6 +97,10 @@ def get_all_annotated_objects():
     """Returns all of the item_id, username pair tuple for locally annotated objects"""
     return "SELECT statement_id, item_id, username from statements"
 
+def get_all_annotated_objects_by_user():
+    """Returns all item_ids for locally annotated objects by user"""
+    return "SELECT DISTINCT item_id FROM statements WHERE username=?"
+
 def get_comments():
     """Returns comment associated with an item_id, username tuple"""
     return "SELECT statement_id, comment, project_lead_username FROM comments WHERE item_id=? and username=?"
@@ -128,3 +132,7 @@ def delete_approval():
 def get_number_of_objects_annotated():
     """Returns the number of total objects that have annotations"""
     return "SELECT COUNT(DISTINCT item_id) FROM statements"
+
+def get_number_of_objects_annotated_by_user():
+    """"Returns the number of total objects that have been annotated by a certain user"""
+    return "SELECT COUNT(DISTINCT item_id) FROM statements WHERE username=?"

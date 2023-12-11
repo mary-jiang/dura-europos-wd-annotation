@@ -2,13 +2,12 @@
 {% block main_tag_attributes %}class="container mt-3"{% endblock main_tag_attributes %}
 {% block main %}
 <h1>Dura-Europos Annotation Tool</h1>
+<p> This tool is a fork of <a href="https://wd-image-positions.toolforge.org/">Wikidata Image Positions</a> specifically meant for the annotation of Dura-Europos related images on Wikidata. </p>
 <p>
-  This tool is a fork of <a href="https://wd-image-positions.toolforge.org/">Wikidata Image Positions</a> specifically meant for the annotation of Dura-Europos related images on Wikidata. 
-
-  To get started, check out the <a href="{{url_for('dashboard', page=1)}}">Dashboard</a> to find an image you would like to annotate. You can make wikidata statements about what is depicted in the image, and then associate that statement with a region on the image (tutorial coming soon!). As a contributor, your annotations will be seen by project leads to give feedback or approve, which will post your annotations to wikidata. You will need a Wikimedia account in order to log in and annotate.
-
-  If you know what you want to annotate then search it up below by item id (starts with a Q).
+  To get started first sign in with your Wikimedia unified account (any account associated with a Wikimedia project, such as Wikipedia or Wikidata) in the top right. Then check out the <a href="{{url_for('dashboard', page=1)}}">Dashboard</a> to find an image you would like to annotate. You can make wikidata statements about what is depicted in the image, and then associate that statement with a region on the image (tutorial coming soon!). As a contributor, your annotations will be seen by project leads to give feedback or approve, which will post your annotations to wikidata. You will need a Wikimedia account in order to log in and annotate.
 </p>
+
+<p> If you know what you want to annotate then search it up below by item id (starts with a Q).</p>
 
 <h2 class="mt-4"><a href="{{url_for('dashboard', page=1)}}">Browse Dashboard</a></h2>
 
