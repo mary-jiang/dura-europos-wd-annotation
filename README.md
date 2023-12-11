@@ -4,7 +4,7 @@
 
 ## Toolforge
 
-On Wikimedia Toolforge, this tool runs under the `dura-europos-wd-annotation` tool name.
+On [Wikimedia Toolforge](https://wikitech.wikimedia.org/wiki/Portal:Toolforge), this tool runs under the `dura-europos-wd-annotation` tool name.
 Source code resides in `~/www/python/src/`, a virtual environment is set up in `~/www/python/venv/`.
 
 Start the webservice with
