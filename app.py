@@ -466,6 +466,22 @@ def api_add_qualifier(domain):
 def dashboard(page):
     page = int(page)
     entries = query_dashboard(page)
+
+    if page < 10:
+        range_1 = [1, 10]
+        range_2 = []
+        range_3 = [678, 683]
+    elif page > 673:
+        range_1 = [1, 5]
+        range_2 = []
+        range_3 = [673, 683]
+    else:
+        range_1 = [1, 5]
+        range_2 = [page - 4, page + 4]
+        range_3 = [678, 683]
+
+    page_ranges = [range_1, range_2 , range_3]
+
     processed_entries = []
     # load all item ids and extract 
     language_codes = request_language_codes()
@@ -483,7 +499,7 @@ def dashboard(page):
         processed_entry.update(load_image(image_datavalue['value'], language_codes))
         processed_entries.append(processed_entry)
 
-    return flask.render_template('dashboard.html', entries=processed_entries)
+    return flask.render_template('dashboard.html', entries=processed_entries, ranges=page_ranges)
 
 @app.route('/projectleaddashboard/<page>')
 def project_lead_dashboard(page): 

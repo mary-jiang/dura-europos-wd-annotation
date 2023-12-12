@@ -3,13 +3,67 @@
 <link rel="stylesheet" type="text/css" href="../static/dashboard.css" />
 <h2>Dashboard</h2>
 {% set curPage = url_for(request.endpoint, **request.view_args).replace("/dashboard/", "") | int %}
-{% for i in range(1, 31)%}
+{% for i in range(ranges[0][0], ranges[0][1] + 1)%}
     {%if i == curPage%}
         <a href="{{url_for('dashboard', page=i)}}" style="color:purple">{{i}}</a>
     {%else%}
         <a href="{{url_for('dashboard', page=i)}}">{{i}}</a>
     {%endif%}
 {% endfor%}
+{% if curPage != 10 %}
+    <p class="seperator">.....</p>
+{% endif %}
+{% if ranges[1] %}
+    {% for i in range(ranges[1][0], ranges[1][1] + 1)%}
+    {%if i == curPage%}
+        <a href="{{url_for('dashboard', page=i)}}" style="color:purple">{{i}}</a>
+    {%else%}
+        <a href="{{url_for('dashboard', page=i)}}">{{i}}</a>
+    {%endif%}
+    {% endfor%}
+    {% if curPage != 673 %}
+        <p class="seperator">.....</p>
+    {% endif %}
+{% endif %}
+{% for i in range(ranges[2][0], ranges[2][1] + 1)%}
+    {%if i == curPage%}
+        <a href="{{url_for('dashboard', page=i)}}" style="color:purple">{{i}}</a>
+    {%else%}
+        <a href="{{url_for('dashboard', page=i)}}">{{i}}</a>
+    {%endif%}
+{% endfor%}
+<div class = "pageinput">
+    <label for="page-input">Go to page: </label>
+    <input type="text" name = "page" id="page-input">
+    <button class = 'btn btn-secondary btn-sm ms-2' onclick='onClick()'>Go</button>
+</div>
+<script>
+    function onClick() {
+        let page = document.querySelector("#page-input")
+        let page_number = Number(page.value)
+        if (isNaN(page.value)) {
+            page.value = "";
+            alert("Please enter a number and try again");
+            return
+        } else if (page_number < 1 || page_number > 683) {
+            page.value = "";
+            alert("Page out of bounds");
+            return
+        }
+
+        let formData = new FormData();
+        formData.append('page', page.value);
+
+        let currentURL = window.location.href;
+        // replace the last part of the thing
+        let index = currentURL.lastIndexOf("/");
+        let newURL = currentURL.substring(0, index);
+        newURL = newURL.concat("/");
+        newURL = newURL.concat(page.value);
+    
+        window.location.href = newURL;
+    }
+</script>
 <div class="flex-grid">
 {% for item in entries%}
     <div class = "col">
