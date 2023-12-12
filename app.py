@@ -837,6 +837,9 @@ def api_email_user():
     link = "https://dura-europos-wd-annotation.toolforge.org" + str(flask.url_for('item', item_id=item_id))
     text = f"Your annotations for object {item_id} have been approved on the Dura Europos Wikidata Annotation Tool. Please navigate to {link} or type in {item_id} into the lookup bar when you visit the homepage at https://dura-europos-wd-annotation.toolforge.org/"
 
+    # update the database
+    queries.query_db(queries.add_approval(), params=[username, item_id, True])
+
     session = authenticated_session("www.wikidata.org")
     if session is None:
         return 'Not logged in', 403
@@ -849,9 +852,6 @@ def api_email_user():
                                 token=token)
     except mwapi.errors.APIError as error:
         return str(error), 500
-    
-    # update the database
-    queries.query_db(queries.add_approval(), params=[username, item_id, True])
 
     return "Success", 200    
 

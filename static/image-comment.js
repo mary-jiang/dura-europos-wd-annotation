@@ -254,9 +254,7 @@ function setup() {
                     document.querySelector('#approve-button').remove();
                     return;
                 } else {
-                    return response.text().then(error => {
-                        window.alert(`An error occurred:\n\n${error}`);
-                    });
+                   alert("This user's annotations have been approved but the email notification has failed to send. This is most likely because the user does not have an email associated with their Wikimedia account")
                 }
             });
 
